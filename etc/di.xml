@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory">
+        <arguments>
+            <argument name="discountRules" xsi:type="array">
+                <item name="add_gift" xsi:type="string">MageSuite\FreeGift\SalesRule\Action\GiftAction</item>
+                <item name="add_gift_once" xsi:type="string">MageSuite\FreeGift\SalesRule\Action\GiftOnceAction</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Magento\SalesRule\Model\Validator\Pool">
+        <arguments>
+            <argument name="validators" xsi:type="array">
+                <item name="discount" xsi:type="array">
+                    <item name="exclude_gifts" xsi:type="object">MageSuite\FreeGift\SalesRule\Validator\GiftItemExcluder</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+    <preference for="Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList"
+                type="MageSuite\FreeGift\Model\Quote\Item\QuantityValidator\QuoteItemQtyList"
+    />
+
+    <type name="Magento\Checkout\Model\Cart">
+        <plugin name="disable_reordering_gifts" type="MageSuite\FreeGift\Plugin\DisableReorderingGifts" sortOrder="1" />
+    </type>
+
+    <type name="Magento\Quote\Model\Quote\Item">
+        <plugin name="force_gift_as_separate_cart_item" type="MageSuite\FreeGift\Plugin\ForceGiftAsSeparateCartItem" sortOrder="1" />
+    </type>
+
+    <type name="Magento\Checkout\Model\Cart">
+        <plugin name="disallow_changing_qty_of_free_gift" type="MageSuite\FreeGift\Plugin\DisallowChangingQtyOfFreeGift" />
+    </type>
+
+    <type name="Magento\Checkout\Controller\Cart\Index">
+        <plugin name="recalculate_cart_on_view" type="MageSuite\FreeGift\Plugin\RecalculateCartOnCartView" sortOrder="1" />
+    </type>
+
+    <type name="Magento\SalesRule\Model\RulesApplier">
+        <plugin name="disable_setting_applied_rule_ids" type="MageSuite\FreeGift\Plugin\DisableSettingAppliedRuleIds" sortOrder="1" />
+    </type>
+
+    <type name="Magento\Checkout\Controller\Cart\Configure">
+        <plugin name="disable_editing_gifts" type="MageSuite\FreeGift\Plugin\DisableEditingGifts" sortOrder="1" />
+    </type>
+
+    <type name="Magento\SalesRule\Model\Rule\Condition\Address">
+        <plugin name="add_subtotal_incl_tax" type="MageSuite\FreeGift\Plugin\Rule\Condition\AddSubtotalInclTax" sortOrder="1" />
+    </type>
+
+    <type name="Magento\SalesRule\Model\Rule\Condition\Product">
+        <plugin name="add_quote_item_sku" type="MageSuite\FreeGift\Plugin\Rule\Condition\AddQuoteItemSku" sortOrder="1" />
+    </type>
+</config>
