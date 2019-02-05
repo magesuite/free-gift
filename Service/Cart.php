@@ -59,6 +59,10 @@ class Cart
      * @var \Magento\CatalogInventory\Api\StockStateInterface
      */
     protected $stockState;
+    /**
+     * @var \Magento\Framework\App\Config\ScopeConfigInterface
+     */
+    protected $scopeConfig;
 
     public function __construct(
         \Magento\Framework\Data\Form\FormKey $formKey,
@@ -72,7 +76,8 @@ class Cart
         \Magento\Framework\DataObject\Factory $dataObjectFactory,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\CatalogInventory\Api\StockStateInterface $stockState,
-        \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList
+        \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList,
+        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
     )
     {
         $this->formKey = $formKey;
@@ -87,6 +92,7 @@ class Cart
         $this->storeManager = $storeManager;
         $this->stockState = $stockState;
         $this->quoteItemQtyList = $quoteItemQtyList;
+        $this->scopeConfig = $scopeConfig;
     }
     
     public function add($productId, $qty) {
@@ -165,7 +171,7 @@ class Cart
         $addToCartParams = ['qty' => $qty];
 
         if(is_numeric($discount) and $discount > 0) {
-            $productPrice = $product->getPriceInfo()->getPrice('final_price')->getAmount()->getValue();
+            $productPrice = $this->getProductPrice($product);
             $addToCartParams['custom_price'] = ($productPrice-($productPrice*($discount/100)));
         }
 
@@ -237,5 +243,13 @@ class Cart
         }
 
         return min($requestedQty, $availableQuantity);
+    }
+
+    protected function getProductPrice($product)
+    {
+        $priceIncludesTax = $this->scopeConfig->getValue('tax/calculation/price_includes_tax');
+        $finalPrice = $product->getPriceInfo()->getPrice('final_price');
+
+        return $priceIncludesTax ? $finalPrice->getAmount()->getValue() : $finalPrice->getValue();
     }
 }
