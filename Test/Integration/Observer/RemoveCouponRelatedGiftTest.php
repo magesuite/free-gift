@@ -25,7 +25,7 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
      */
     protected $quoteRepository;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
