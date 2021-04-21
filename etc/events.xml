@@ -12,4 +12,8 @@
         <observer name="reset_gift_items" instance="MageSuite\FreeGift\Observer\ResetGiftItems" />
         <observer name="add_gifts_before_collecting_totals" instance="MageSuite\FreeGift\Observer\AddGiftsBeforeCollectingTotals" />
     </event>
+
+    <event name="controller_action_predispatch_checkout_cart_couponPost">
+        <observer name="remove_coupon_related_gift" instance="MageSuite\FreeGift\Observer\RemoveCouponRelatedGift" />
+    </event>
 </config>
