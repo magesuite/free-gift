@@ -54,4 +54,8 @@
     <type name="Magento\SalesRule\Model\Rule\Condition\Product">
         <plugin name="add_quote_item_sku" type="MageSuite\FreeGift\Plugin\Rule\Condition\AddQuoteItemSku" sortOrder="1" />
     </type>
+
+    <type name="Magento\Quote\Model\CouponManagement">
+        <plugin name="remove_coupon_related_gift" type="MageSuite\FreeGift\Plugin\Quote\Model\CouponManagement\RemoveCouponRelatedGift" sortOrder="1" />
+    </type>
 </config>
