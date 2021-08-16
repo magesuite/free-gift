@@ -35,12 +35,17 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
 
     /**
      * @magentoDataFixture freeGiftOnceSalesRuleFixture
-     * @magentoDataFixture quoteFixture
+     * @magentoDataFixture Magento/Sales/_files/quote.php
+     * @magentoDbIsolation enabled
      * @magentoAppIsolation enabled
      */
     public function testFreeGiftItemIsRemovedFromCartAfterRemovingCoupon()
     {
         $quote = $this->getQuote();
+        // From Magento 2.4.3 following setting being set to true caused incorrect totals calculation in the test
+        $quote->setIsMultiShipping(false);
+        $quote->save();
+
         $this->checkoutSession->setQuoteId($quote->getId());
 
         $this->sendCouponCodeRequest([
@@ -66,9 +71,7 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
     {
         $this->getRequest()->setMethod(\Magento\Framework\App\Request\Http::METHOD_POST);
         $this->getRequest()->setParams($inputData);
-        $this->dispatch(
-            'checkout/cart/couponPost/'
-        );
+        $this->dispatch('checkout/cart/couponPost/');
     }
 
     protected function getQuote()
@@ -82,11 +85,6 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
         $quotes = $quoteRepository->getList($searchCriteria)->getItems();
 
         return array_pop($quotes);
-    }
-
-    public static function quoteFixture()
-    {
-        require __DIR__ . '/../../../../../../dev/tests/integration/testsuite/Magento/Sales/_files/quote.php';
     }
 
     public static function  freeGiftOnceSalesRuleFixture()

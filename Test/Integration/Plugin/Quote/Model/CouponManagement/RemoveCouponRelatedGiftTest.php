@@ -31,7 +31,7 @@ class RemoveCouponRelatedGiftTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @magentoDataFixture quoteFixture
+     * @magentoDataFixture Magento/Sales/_files/quote.php
      * @magentoDataFixture freeGiftOnceSalesRuleFixture
      */
     public function testFreeGiftItemIsRemovedFromCartAfterRemovingCouponAndItCanBeAddedAgain()
@@ -65,11 +65,6 @@ class RemoveCouponRelatedGiftTest extends \PHPUnit\Framework\TestCase
         $quotes = $quoteRepository->getList($searchCriteria)->getItems();
 
         return array_pop($quotes);
-    }
-
-    public static function quoteFixture()
-    {
-        require __DIR__ . '/../../../../../../../../../dev/tests/integration/testsuite/Magento/Sales/_files/quote.php';
     }
 
     public static function  freeGiftOnceSalesRuleFixture()
