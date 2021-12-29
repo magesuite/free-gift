@@ -1,6 +1,6 @@
 <?php
 
-namespace MageSuite\FreeGift\Test\Integration\Service;
+namespace MageSuite\FreeGift\Test\Integration\Plugin\Quote\Model\CouponManagement;
 
 class RemoveCouponRelatedGiftTest extends \PHPUnit\Framework\TestCase
 {
