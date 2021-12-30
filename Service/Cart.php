@@ -64,6 +64,33 @@ class Cart
      */
     protected $scopeConfig;
 
+    /**
+     * @var \Magento\InventorySalesApi\Api\StockResolverInterface
+     */
+    protected $stockResolver;
+
+    /**
+     * @var \Magento\InventorySalesApi\Model\GetStockItemDataInterface
+     */
+    protected $stockItemData;
+
+    /**
+     * @param \Magento\Framework\Data\Form\FormKey $formKey
+     * @param \Magento\Checkout\Model\Cart $cart
+     * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
+     * @param \Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable $configurableProduct
+     * @param \Magento\Framework\Serialize\Serializer\Json $serializer
+     * @param \Magento\Framework\EntityManager\EventManager $eventManager
+     * @param \Magento\Framework\App\RequestInterface $request
+     * @param \Magento\Framework\App\ResponseInterface $response
+     * @param \Magento\Framework\DataObject\Factory $dataObjectFactory
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @param \Magento\CatalogInventory\Api\StockStateInterface $stockState
+     * @param \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param \Magento\InventorySalesApi\Api\StockResolverInterface $stockResolver
+     * @param \Magento\InventorySalesApi\Model\GetStockItemDataInterface $stockItemData
+     */
     public function __construct(
         \Magento\Framework\Data\Form\FormKey $formKey,
         \Magento\Checkout\Model\Cart $cart,
@@ -77,7 +104,9 @@ class Cart
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\CatalogInventory\Api\StockStateInterface $stockState,
         \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
+        \Magento\InventorySalesApi\Api\StockResolverInterface $stockResolver,
+        \Magento\InventorySalesApi\Model\GetStockItemDataInterface $stockItemData
     )
     {
         $this->formKey = $formKey;
@@ -93,8 +122,10 @@ class Cart
         $this->stockState = $stockState;
         $this->quoteItemQtyList = $quoteItemQtyList;
         $this->scopeConfig = $scopeConfig;
+        $this->stockResolver = $stockResolver;
+        $this->stockItemData = $stockItemData;
     }
-    
+
     public function add($productId, $qty) {
         $storeId = $this->storeManager->getStore()->getId();
 
@@ -143,7 +174,7 @@ class Cart
         }
 
         $this->cart->addProduct($productToAdd, $addToCartParams);
-        
+
         return $productToAdd;
     }
 
@@ -217,10 +248,15 @@ class Cart
      */
     protected function determineQty($requestedQty, $product)
     {
-        $availableQuantity = $this->stockState->getStockQty(
-            $product->getId(),
-            $product->getStore()->getWebsiteId()
-        );
+        $availableQuantity = 0.0;
+
+        $websiteCode = $product->getStore()->getWebsite()->getCode();
+        $stockId = $this->stockResolver->execute(\Magento\InventorySalesApi\Api\Data\SalesChannelInterface::TYPE_WEBSITE, $websiteCode)->getStockId();
+        $stockItemData = $this->stockItemData->execute($product->getSku(), $stockId);
+
+        if (isset($stockItemData['quantity'])) {
+            $availableQuantity = $stockItemData['quantity'];
+        }
 
         $qtyAlreadyAddedToCart = 0;
 
