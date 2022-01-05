@@ -108,10 +108,13 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
         $this->assertEquals(2, count($quote->getAllItems()));
         $this->assertEquals(5.0, $quoteItem->getQty());
 
-        $cartItems = $cart->getQuote()->getAllItems();
-        $cartItems[1]->setQty(2);
+        foreach ($quote->getItems() as $item) {
+            if ($item->getItemId() === $quoteItem->getId()) {
+                $item->setQty(2);
+                break;
+            }
+        }
 
-        $quote->setItems($cartItems);
         $this->quoteRepository->save($quote);
         $quote->collectTotals();
 
