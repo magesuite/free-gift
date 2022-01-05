@@ -74,6 +74,9 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
         $orderId = $this->quoteManagement->placeOrder($quote->getId());
         $order = $this->orderRepository->get((int) $orderId);
 
+        $order->setStatus('complete');
+        $this->orderRepository->save($order);
+
         $appliedRuleId = null;
         foreach ($order->getItems() as $item) {
             if ($item->getSku() === 'simple_product_for_free_gift') {

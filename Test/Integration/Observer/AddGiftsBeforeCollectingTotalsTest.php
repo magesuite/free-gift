@@ -20,17 +20,17 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     protected $productRepository;
 
     /**
-     * @var \Magento\Framework\Data\Form\FormKey
+     * @var \Magento\Quote\Api\CartRepositoryInterface
      */
-    protected $formKey;
+    protected $quoteRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-        $this->cart = $this->objectManager->get(\Magento\Checkout\Model\Cart::class);
+        $this->cart = $this->objectManager->create(\Magento\Checkout\Model\Cart::class);
         $this->productRepository = $this->objectManager->get(\Magento\Catalog\Api\ProductRepositoryInterface::class);
-        $this->formKey = $this->objectManager->get(\Magento\Framework\Data\Form\FormKey::class);
+        $this->quoteRepository = $this->objectManager->get(\Magento\Quote\Api\CartRepositoryInterface::class);
     }
 
     /**
@@ -92,44 +92,30 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
      * @magentoDataFixture loadProduct
      * @magentoDataFixture loadFreeGiftProduct
      * @magentoDataFixture loadFreeGiftSalesRuleOneGiftPerProduct
+     * @magentoDataFixture loadNotLoggedInUserQuote
      */
     public function testItAllowsForDecreasingAmountOfFreeGift()
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
         $freeProduct = $this->productRepository->get('free-gift-product');
 
-        $parameters = [
-            'product' => $product->getId(),
-            'qty' => 5
-        ];
-
         $cart = $this->cart;
-        $cart->addProduct($product, $parameters);
-        $cart->save();
+        $quoteId = $cart->getQuote()->getId();
 
-        $cartItems = $cart->getItems()->getItems();
+        $quote = $this->quoteRepository->getActive($quoteId);
+        $quoteItem = $this->getQuoteItemByProductId($quote, (int) $freeProduct->getId());
 
-        $this->assertEquals(2, count($cartItems));
-        $this->assertEquals(5.0, $cartItems[1]->getQty());
+        $this->assertEquals(2, count($quote->getAllItems()));
+        $this->assertEquals(5.0, $quoteItem->getQty());
 
-        $quote = $cart->getQuote();
+        $cartItems = $cart->getQuote()->getAllItems();
+        $cartItems[1]->setQty(2);
 
-        $quoteItem = null;
-        foreach ($quote->getAllItems() as $item) {
-            if ($freeProduct->getId() == $item->getProductId()) {
-                $quoteItem = $item;
-            }
-        }
+        $quote->setItems($cartItems);
+        $this->quoteRepository->save($quote);
+        $quote->collectTotals();
 
-        $postData = [
-            'cart' => [$quoteItem->getId() => ['qty' => 2.0]],
-            'update_cart_action' => 'update_qty',
-            'form_key' => $this->formKey->getFormKey()
-        ];
-        $this->getRequest()->setMethod(\Magento\Framework\App\Request\Http::METHOD_POST);
-        $this->getRequest()->setPostValue($postData);
-
-        $this->dispatch('checkout/cart/updatePost');
+        $quoteItem = $this->getQuoteItemByProductId($quote, (int) $freeProduct->getId());
 
         $this->assertEquals(2, count($quote->getAllItems()));
         $this->assertEquals(2.0, $quoteItem->getQty());
@@ -250,6 +236,23 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
         $this->assertEquals(100.0, $giftItemInRegularPrice->getPrice());
     }
 
+    /**
+     * @param \Magento\Quote\Model\Quote $quote
+     * @param int $productId
+     * @return \Magento\Quote\Model\Quote\Item|null
+     */
+    private function getQuoteItemByProductId(\Magento\Quote\Model\Quote $quote, int $productId): ?\Magento\Quote\Model\Quote\Item
+    {
+        $quoteItem = null;
+        foreach ($quote->getItems() as $item) {
+            if ($productId == $item->getProductId()) {
+                $quoteItem = $item;
+            }
+        }
+
+        return $quoteItem;
+    }
+
     public static function loadProduct()
     {
         include __DIR__ . '/../files/product.php';
@@ -268,5 +271,10 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     public static function loadFreeGiftSalesRuleOneGiftPerProduct()
     {
         include __DIR__ . '/../files/free_gift_sales_rule_one_gift_per_product.php';
+    }
+
+    public static function loadNotLoggedInUserQuote()
+    {
+        include __DIR__ . '/../files/not_logged_in_user_quote.php';
     }
 }
