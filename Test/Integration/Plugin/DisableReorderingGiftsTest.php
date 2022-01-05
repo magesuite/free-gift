@@ -103,13 +103,7 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
         $quoteItemsCollection = $this->quoteRepository->get((int)$quoteId)->getItemsCollection();
         $quoteItems = $quoteItemsCollection->getItems();
 
-        $this->assertEquals(2, count($quoteItems));
-
-        $giftProductWithRegularPrice = $quoteItemsCollection->getItemsByColumnValue('sku', 'free-gift-product');
-
-        $this->assertIsArray($giftProductWithRegularPrice);
-        $this->assertEquals(100.0, $giftProductWithRegularPrice[0]->getPrice());
-        $this->assertEquals(0, $giftProductWithRegularPrice[0]->getIsGift());
+        $this->assertEquals(1, count($quoteItems));
     }
 
     public static function loadProduct()
