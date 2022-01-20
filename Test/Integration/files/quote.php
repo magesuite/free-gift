@@ -77,8 +77,8 @@ $shippingAddress->setCollectShippingRates(true)
 
 /** @var Magento\Quote\Model\Quote\Payment $payment */
 $payment = $objectManager->create('Magento\Quote\Api\Data\PaymentInterface', ['data' => ['is_available' => true]]);
+$payment->setMethod('checkmo');
 $quote->setPayment($payment);
 $quote->setInventoryProcessed(false);
-$quote->getPayment()->setMethod('checkmo');
 $quote->collectTotals();
 $quote->save();

@@ -58,13 +58,15 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
     }
 
     /**
-     * @magentoAppIsolation enabled
+     * @magentoAppIsolation disabled
      * @magentoDbIsolation enabled
+     * @magentoAppArea frontend
      * @magentoDataFixture loadProduct
      * @magentoDataFixture loadFreeGiftProduct
      * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
      * @magentoDataFixture loadCustomer
      * @magentoDataFixture loadQuote
+     * @magentoConfigFixture default payment/checkmo/active 1
      */
     public function testItDoesNotAddFreeGiftToCartDuringReorderingWhenGiftIsNotAvailableAnymore()
     {
@@ -89,7 +91,7 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
         $rule->setIsActive(false);
         $this->ruleRepository->save($rule);
 
-        $this->customerSession->setCustomerId($order->getCustomerId());
+        $this->customerSession->setCustomerId((string) $order->getCustomerId());
 
         $this->getRequest()->setMethod(\Magento\Framework\App\Request\Http::METHOD_POST);
         $this->getRequest()->setParam('order_id', $orderId);

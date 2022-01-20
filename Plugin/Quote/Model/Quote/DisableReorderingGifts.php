@@ -1,5 +1,6 @@
 <?php
 
+
 namespace MageSuite\FreeGift\Plugin\Quote\Model\Quote;
 
 class DisableReorderingGifts
@@ -9,8 +10,22 @@ class DisableReorderingGifts
      */
     protected $request;
 
-    public function __construct(\Magento\Framework\App\Request\Http $request) {
+    /**
+     * @var \Magento\Sales\Model\OrderFactory
+     */
+    protected $orderFactory;
+
+    /**
+     * @param \Magento\Framework\App\Request\Http $request
+     * @param \Magento\Sales\Model\OrderFactory $orderFactory
+     */
+    public function __construct(
+        \Magento\Framework\App\Request\Http $request,
+        \Magento\Sales\Model\OrderFactory $orderFactory
+    )
+    {
         $this->request = $request;
+        $this->orderFactory = $orderFactory;
     }
 
     /**
@@ -29,8 +44,9 @@ class DisableReorderingGifts
         $product,
         $request = null,
         $processMode = \Magento\Catalog\Model\Product\Type\AbstractType::PROCESS_MODE_FULL
-    ) {
-        if($this->productIsAGiftFromPreviousOrder($request)) {
+    )
+    {
+        if ($this->productIsAGiftFromPreviousOrder($request)) {
             return $subject;
         }
 
@@ -43,9 +59,22 @@ class DisableReorderingGifts
      */
     protected function productIsAGiftFromPreviousOrder($request): bool
     {
+        if ($this->request->getFullActionName() !== 'sales_order_reorder') {
+            return false;
+        }
+
+        if (!isset($request['product'])) {
+            return false;
+        }
+
+        $orderId = $this->request->getParam('order_id');
+        $order = $this->orderFactory->create()->load($orderId);
+        $orderItems = $order->getItemsCollection();
+
+        $product = $orderItems->getItemsByColumnValue('product_id', $request['product']);
+
         return
-            $this->request->getFullActionName() == 'sales_order_reorder' &&
-            isset($request['custom_price']) &&
-            is_numeric($request['custom_price']);
+            isset($product[0]['product_options']['info_buyRequest']['custom_price']) &&
+            is_numeric($product[0]['product_options']['info_buyRequest']['custom_price']);
     }
 }
