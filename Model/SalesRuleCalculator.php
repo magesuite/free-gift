@@ -10,6 +10,26 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
     ];
 
     /**
+     * @var bool
+     */
+    protected $isProcessed = false;
+
+    /**
+     * @param $items
+     * @param $address
+     */
+    public function processAllItems($items, $address)
+    {
+        foreach($items as $item) {
+            $this->process($item, $address);
+        }
+        if (!$this->isProcessed) {
+            $this->isProcessed = true;
+            $address->getQuote()->collectTotals();
+        }
+    }
+
+    /**
      * Applying free gift rules
      *
      * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
