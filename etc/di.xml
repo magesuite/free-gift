@@ -35,10 +35,6 @@
         <plugin name="disallow_changing_qty_of_free_gift" type="MageSuite\FreeGift\Plugin\DisallowChangingQtyOfFreeGift" />
     </type>
 
-    <type name="Magento\Checkout\Controller\Cart\Index">
-        <plugin name="recalculate_cart_on_view" type="MageSuite\FreeGift\Plugin\RecalculateCartOnCartView" sortOrder="1" />
-    </type>
-
     <type name="Magento\SalesRule\Model\RulesApplier">
         <plugin name="disable_setting_applied_rule_ids" type="MageSuite\FreeGift\Plugin\DisableSettingAppliedRuleIds" sortOrder="1" />
     </type>

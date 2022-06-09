@@ -33,6 +33,10 @@ class ResetGiftItems implements ObserverInterface
         /** @var Quote $quote */
         $quote = $observer->getEvent()->getData('quote');
 
+        if ($quote->getData('gift_items_reseted')) {
+            return;
+        }
+
         $address = $quote->getShippingAddress();
 
         if ($quote->getAllItems() == null || $address->getAddressType() != Quote\Address::TYPE_SHIPPING)
@@ -88,5 +92,7 @@ class ResetGiftItems implements ObserverInterface
                 $quoteItem->setAppliedRuleIds(null);
             }
         }
+
+        $quote->setData('gift_items_reseted', true);
     }
 }
