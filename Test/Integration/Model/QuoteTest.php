@@ -71,7 +71,7 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
                 ],
             ]
         );
-        $quote->updateItem($item->getId(), $buyRequest);
+        $quote->updateItem((int)$item->getId(), $buyRequest);
     }
 
     public static function qtyDataProvider()
