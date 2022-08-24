@@ -1,28 +1,14 @@
 <?php
 
+declare(strict_types=1);
 namespace MageSuite\FreeGift\Test\Integration\Observer;
 
-class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase\AbstractController
+class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\AbstractController
 {
-    /**
-     * @var \Magento\Framework\App\ObjectManager
-     */
-    protected $objectManager;
-
-    /**
-     * @var \Magento\Checkout\Model\Cart
-     */
-    protected $cart;
-
-    /**
-     * @var \Magento\Catalog\Api\ProductRepositoryInterface
-     */
-    protected $productRepository;
-
-    /**
-     * @var \Magento\Quote\Api\CartRepositoryInterface
-     */
-    protected $quoteRepository;
+    protected ?\Magento\Framework\App\ObjectManager $objectManager;
+    protected ?\Magento\Checkout\Model\Cart $cart;
+    protected ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository;
+    protected ?\Magento\Quote\Api\CartRepositoryInterface $quoteRepository;
 
     protected function setUp(): void
     {
@@ -36,11 +22,11 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_no_coupon.php
      */
-    public function testItAddsFreeGiftToCart()
+    public function testItAddsFreeGiftToCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
 
@@ -62,14 +48,13 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleOneGiftPerProduct
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_one_gift_per_product.php
      */
-    public function testItAddsOneFreeGiftPerEveryProductInCart()
+    public function testItAddsOneFreeGiftPerEveryProductInCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
-
         $parameters = [
             'product' => $product->getId(),
             'qty' => 3
@@ -89,19 +74,48 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleOneGiftPerProduct
-     * @magentoDataFixture loadNotLoggedInUserQuote
+     * @magentoConfigFixture default_store tax/cart_display/subtotal 2
+     * @magentoDataFixture Magento/Catalog/_files/product_virtual.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_one_gift_per_product.php
      */
-    public function testItAllowsForDecreasingAmountOfFreeGift()
+    public function testVirtualProductWithFreeGiftCartSubtotalIncludingTax(): void
+    {
+        $product = $this->productRepository->get('virtual-product');
+        $parameters = [
+            'product' => $product->getId(),
+            'qty' => 3
+        ];
+
+        $cart = $this->cart;
+        $cart->addProduct($product, $parameters);
+        $cart->save();
+
+        $cartItems = $cart->getItems()->getItems();
+
+        $this->assertEquals(2, count($cartItems));
+        $this->assertEquals(3.0, $cartItems[0]->getQty());
+        $this->assertEquals(3.0, $cartItems[1]->getQty());
+
+        $totals = $cart->getQuote()->getTotals();
+        $subtotalAmount = $totals['subtotal']->getValue();
+        $this->assertEquals(30.0, $subtotalAmount);
+    }
+
+    /**
+     * @magentoAppIsolation enabled
+     * @magentoDbIsolation enabled
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_one_gift_per_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/not_logged_in_user_quote.php
+     */
+    public function testItAllowsForDecreasingAmountOfFreeGift(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
         $freeProduct = $this->productRepository->get('free-gift-product');
-
         $cart = $this->cart;
         $quoteId = $cart->getQuote()->getId();
-
         $quote = $this->quoteRepository->getActive($quoteId);
         $quoteItem = $this->getQuoteItemByProductId($quote, (int) $freeProduct->getId());
 
@@ -127,14 +141,13 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_no_coupon.php
      */
-    public function testItRemovesFreeGiftFromCartWhenOtherProductsAreRemovedFromCart()
+    public function testItRemovesFreeGiftFromCartWhenOtherProductsAreRemovedFromCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
-
         $parameters = [
             'product' => $product->getId(),
             'qty' => 1
@@ -156,21 +169,19 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
         }
 
         $quote->save();
-
         $this->assertEquals(0, count($quote->getAllItems()));
     }
 
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_no_coupon.php
      */
-    public function testItAllowsForRemovingFreeGiftFromCart()
+    public function testItAllowsForRemovingFreeGiftFromCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
-
         $parameters = [
             'product' => $product->getId(),
             'qty' => 1
@@ -192,22 +203,20 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
         }
 
         $quote->save();
-
         $this->assertEquals(1, count($quote->getAllItems()));
     }
 
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/files/free_gift_sales_rule_no_coupon.php
      */
-    public function testItAddsTheSameProductAsAGiftButInRegularPrice()
+    public function testItAddsTheSameProductAsAGiftButInRegularPrice(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
         $giftProduct = $this->productRepository->get('free-gift-product');
-
         $cart = $this->cart;
         $cart->addProduct(
             $product,
@@ -244,8 +253,10 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
      * @param int $productId
      * @return \Magento\Quote\Model\Quote\Item|null
      */
-    private function getQuoteItemByProductId(\Magento\Quote\Model\Quote $quote, int $productId): ?\Magento\Quote\Model\Quote\Item
-    {
+    private function getQuoteItemByProductId(
+        \Magento\Quote\Model\Quote $quote,
+        int $productId
+    ): ?\Magento\Quote\Model\Quote\Item {
         $quoteItem = null;
         foreach ($quote->getItems() as $item) {
             if ($productId == $item->getProductId()) {
@@ -254,30 +265,5 @@ class AddGiftsBeforeCollectingTotalsTest extends \Magento\TestFramework\TestCase
         }
 
         return $quoteItem;
-    }
-
-    public static function loadProduct()
-    {
-        include __DIR__ . '/../files/product.php';
-    }
-
-    public static function loadFreeGiftProduct()
-    {
-        include __DIR__ . '/../files/free_gift_product.php';
-    }
-
-    public static function loadFreeGiftSalesRuleNoCoupon()
-    {
-        include __DIR__ . '/../files/free_gift_sales_rule_no_coupon.php';
-    }
-
-    public static function loadFreeGiftSalesRuleOneGiftPerProduct()
-    {
-        include __DIR__ . '/../files/free_gift_sales_rule_one_gift_per_product.php';
-    }
-
-    public static function loadNotLoggedInUserQuote()
-    {
-        include __DIR__ . '/../files/not_logged_in_user_quote.php';
     }
 }
