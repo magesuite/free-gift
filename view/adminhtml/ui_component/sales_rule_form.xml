@@ -23,7 +23,6 @@
                     <item name="source" xsi:type="string">sales_rule</item>
                     <item name="dataScope" xsi:type="string">gift_skus_discounts</item>
                     <item name="sortOrder" xsi:type="number">2</item>
-                    <item name="notice" xsi:type="string" translate="true">Percentage discounts for gifts, separated by commas. If blank, a 100% discount will be used.</item>
                 </item>
             </argument>
         </field>
