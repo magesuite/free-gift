@@ -54,4 +54,8 @@
     <type name="Magento\Quote\Model\CouponManagement">
         <plugin name="remove_coupon_related_gift" type="MageSuite\FreeGift\Plugin\Quote\Model\CouponManagement\RemoveCouponRelatedGift" sortOrder="1" />
     </type>
+
+    <type name="Magento\Quote\Model\Quote\Address">
+        <plugin name="filter_free_gifts" type="MageSuite\FreeGift\Plugin\Quote\Model\Address\FilterFreeGifts" sortOrder="10" />
+    </type>
 </config>
