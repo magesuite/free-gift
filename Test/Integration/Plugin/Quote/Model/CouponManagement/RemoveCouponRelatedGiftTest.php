@@ -69,6 +69,6 @@ class RemoveCouponRelatedGiftTest extends \PHPUnit\Framework\TestCase
 
     public static function  freeGiftOnceSalesRuleFixture()
     {
-        require __DIR__ . '/../../../../files/free_gift_once_sales_rule_with_coupon.php';
+        require __DIR__ . '/../../../../_files/free_gift_once_sales_rule_with_coupon.php';
     }
 }
