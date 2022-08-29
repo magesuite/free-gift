@@ -34,12 +34,14 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 
     /**
      * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
+     * @param \Magento\SalesRule\Model\Rule|null $rule
      * @return void
      * @throws \Zend_Db_Select_Exception
      * @throws \Zend_Validate_Exception
      */
     public function process(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item
+        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
+        \Magento\SalesRule\Model\Rule $rule = null
     ) {
         $address = $item->getAddress();
         $rules = $this->_getRules($address);
