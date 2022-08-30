@@ -1,6 +1,6 @@
 <?php
-
 declare(strict_types=1);
+
 require 'free_gift_product.php';
 
 $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();

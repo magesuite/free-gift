@@ -1,6 +1,8 @@
 <?php
 
 $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
+/** @var Magento\Framework\Registry $registry */
+$registry = $objectManager->get(\Magento\Framework\Registry::class);
 
 /** @var \Magento\SalesRule\Model\Rule $salesRule */
 $salesRule = $objectManager->create(\Magento\SalesRule\Model\Rule::class);
@@ -24,6 +26,14 @@ $salesRule->setData(
         'is_label_visible_by_default' => 0,
         'customer_group_ids' => [\Magento\Customer\Model\GroupManagement::NOT_LOGGED_IN_ID],
         'coupon_type' => \Magento\SalesRule\Model\Rule::COUPON_TYPE_NO_COUPON,
+//        'conditions' => [
+//            [
+//                'type' => \Magento\SalesRule\Model\Rule\Condition\Address::class,
+//                'attribute' => 'base_subtotal_total_incl_tax',
+//                'operator' => '>',
+//                'value' => 9
+//            ]
+//        ],
         'conditions' => [
             [
               "type" => Magento\SalesRule\Model\Rule\Condition\Combine::class,
@@ -53,7 +63,9 @@ $salesRule->setData(
               "aggregator" => "all"
             ]
         ],
-        'gift_skus' => 'free-gift-product',
+        'gift_skus' => 'simple-1',
+        'gift_skus_discounts' => 100,
+        'gift_skus_qty' => 1,
         'coupon_code' => 0,
         'website_ids' => [
             \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
@@ -63,3 +75,5 @@ $salesRule->setData(
     ]
 );
 $salesRule->save();
+$registry->unregister('MageSuite/FreeGift/Test/Integration/_files/cart_rule_free_gift.php');
+$registry->register('MageSuite/FreeGift/Test/Integration/_files/cart_rule_free_gift.php', $salesRule->getRuleId());

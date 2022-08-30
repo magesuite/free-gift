@@ -1,47 +1,42 @@
 <?php
 
-declare(strict_types=1);
 namespace MageSuite\FreeGift\Model;
 
 class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 {
-    protected bool $isProcessed = false;
-    protected array $supportedRules = [
+    protected $supportedRules = [
         \MageSuite\FreeGift\SalesRule\Action\GiftAction::ACTION,
         \MageSuite\FreeGift\SalesRule\Action\GiftOnceAction::ACTION
     ];
 
     /**
-     * @param array $items
-     * @param \Magento\Quote\Api\Data\CartInterface $quote
-     * @return void
-     * @throws \Zend_Db_Select_Exception
-     * @throws \Zend_Validate_Exception
+     * @var bool
      */
-    public function processAllItems(
-        array $items,
-        \Magento\Quote\Api\Data\CartInterface $quote
-    ):void {
-        foreach ($items as $item) {
-            $this->process($item);
-        }
+    protected $isProcessed = false;
 
+    /**
+     * @param $items
+     * @param $address
+     */
+    public function processAllItems($items, $address)
+    {
+        foreach($items as $item) {
+            $this->process($item, $address);
+        }
         if (!$this->isProcessed) {
             $this->isProcessed = true;
-            $quote->collectTotals();
+            $address->getQuote()->collectTotals();
         }
     }
 
     /**
+     * Applying free gift rules
+     *
      * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @return void
-     * @throws \Zend_Db_Select_Exception
-     * @throws \Zend_Validate_Exception
+     * @return $this
      */
-    public function process(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item
-    ) {
-        $address = $item->getAddress();
+    public function process(\Magento\Quote\Model\Quote\Item\AbstractItem $item, $address = null)
+    {
         $rules = $this->_getRules($address);
 
         /** @var \Magento\SalesRule\Model\Rule $rule */
@@ -57,20 +52,12 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 
             $this->applyRule($rule, $item);
         }
+
+        return $this;
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @param \Magento\Quote\Api\Data\AddressInterface $address
-     * @return bool
-     * @throws \Zend_Validate_Exception
-     */
-    protected function canApplyRule(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
-        \Magento\SalesRule\Model\Rule $rule,
-        \Magento\Quote\Api\Data\AddressInterface $address
-    ):bool {
+    protected function canApplyRule($item, $rule, $address)
+    {
         if (!$this->canApplyDiscount($item)) {
             return false;
         }
@@ -79,44 +66,30 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
             return false;
         }
 
-        if ($rule->getActions()->validate($item)) {
-            return true;
-        }
-
-        $childItems = $item->getChildren();
-        if (empty($childItems)) {
-            return false;
-        }
-
-        $isContinue = true;
-        foreach ($childItems as $childItem) {
-            if ($rule->getActions()->validate($childItem)) {
-                $isContinue = false;
-                break;
+        if (!$rule->getActions()->validate($item)) {
+            $childItems = $item->getChildren();
+            $isContinue = true;
+            if (!empty($childItems)) {
+                foreach ($childItems as $childItem) {
+                    if ($rule->getActions()->validate($childItem)) {
+                        $isContinue = false;
+                    }
+                }
             }
-        }
-        if ($isContinue) {
-            return false;
+            if ($isContinue) {
+                return false;
+            }
         }
 
         return true;
     }
 
-    /**
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @return bool
-     */
-    protected function applyRule(
-        \Magento\SalesRule\Model\Rule $rule,
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item
-    ):bool {
-        /** @var \Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory $calculatorFactory */
+    protected function applyRule($rule, $item)
+    {
         $calculatorFactory = \Magento\Framework\App\ObjectManager::getInstance()->create(\Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory::class);
-        /** @var \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction $ruleCalculator */
         $ruleCalculator = $calculatorFactory->create($rule->getSimpleAction());
 
-        if ($ruleCalculator === null) {
+        if ($ruleCalculator == null) {
             return false;
         }
 
@@ -124,21 +97,21 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
             return false;
         }
 
-        return $ruleCalculator->calculate($rule, $item, (float) $item->getTotalQty(), true);
+        return $ruleCalculator->calculate($rule, $item, $item->getTotalQty(), true);
     }
 
     /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @return void
+     * If item does not validate anymore against rule that was applied before we need to remove all
+     * gift items that were added in relation to that specific item.
+     * This handles case when rule no longer applies for item.
+     * @param $item
+     * @param $rule
      */
-    protected function removeGiftItemsRelatedToItemAndRule(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
-        \Magento\SalesRule\Model\Rule $rule
-    ):void {
-        $ruleId = (int) $rule->getId();
-        $appliedRuleIds = $item->getAppliedRuleIds();
-        if (empty($appliedRuleIds) || !in_array($ruleId, explode(',', $appliedRuleIds))) {
+    protected function removeGiftItemsRelatedToItemAndRule($item, $rule)
+    {
+        $ruleId = $rule->getId();
+
+        if(!in_array($ruleId, explode(',', $item->getAppliedRuleIds()))) {
             return;
         }
 
@@ -155,30 +128,23 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
     }
 
     /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $toDeleteItem
-     * @param string $productSku
-     * @param int $ruleId
+     * @param $toDeleteItem
+     * @param $productSku
+     * @param $ruleId
      * @return bool
      */
-    protected function isRelatedGiftItem(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $toDeleteItem,
-        string $productSku,
-        int $ruleId
-    ):bool {
+    protected function isRelatedGiftItem($toDeleteItem, $productSku, $ruleId)
+    {
         return
             (
-                $toDeleteItem->getOptionByCode(
-                    \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU
-                ) instanceof \Magento\Quote\Model\Quote\Item\Option
-                &&
-                $toDeleteItem->getOptionByCode(
-                    \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU
-                )->getValue() == $productSku
+                $toDeleteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU) instanceof \Magento\Quote\Model\Quote\Item\Option
+                and
+                $toDeleteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU)->getValue() == $productSku
             )
-            &&
+            and
             (
                 $toDeleteItem->getOptionByCode('rule_id') instanceof \Magento\Quote\Model\Quote\Item\Option
-                &&
+                and
                 $toDeleteItem->getOptionByCode('rule_id')->getValue() == $ruleId
             );
     }
