@@ -15,4 +15,5 @@ $product->setTypeId(\Magento\Catalog\Model\Product\Type::TYPE_SIMPLE)
     ->setWebsiteIds([1])
     ->setStockData(['use_config_manage_stock' => 1, 'qty' => 120, 'is_qty_decimal' => 0, 'is_in_stock' => 1])
     ->setCanSaveCustomOptions(true)
+    ->setIsObjectNew(true)
     ->save();

@@ -13,7 +13,7 @@
     </event>
 
     <event name="sales_quote_collect_totals_after">
-        <observer name="add_gifts_before_collecting_totals" instance="MageSuite\FreeGift\Observer\AddGiftsBeforeCollectingTotals" />
+        <observer name="add_gifts_after_collecting_totals" instance="MageSuite\FreeGift\Observer\AddGiftsAfterCollectingTotals" />
     </event>
 
     <event name="controller_action_predispatch_checkout_cart_couponPost">

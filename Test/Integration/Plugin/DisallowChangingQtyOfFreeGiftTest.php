@@ -69,16 +69,16 @@ class DisallowChangingQtyOfFreeGiftTest extends \Magento\TestFramework\TestCase\
 
     public static function loadProduct()
     {
-        include __DIR__ . '/../files/product.php';
+        include __DIR__ . '/../_files/product.php';
     }
 
     public static function loadFreeGiftProduct()
     {
-        include __DIR__ . '/../files/free_gift_product.php';
+        include __DIR__ . '/../_files/free_gift_product.php';
     }
 
     public static function loadFreeGiftSalesRuleNoCoupon()
     {
-        include __DIR__ . '/../files/free_gift_sales_rule_no_coupon.php';
+        include __DIR__ . '/../_files/free_gift_sales_rule_no_coupon.php';
     }
 }
