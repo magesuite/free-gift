@@ -111,7 +111,7 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
     {
         $ruleId = $rule->getId();
 
-        if(!in_array($ruleId, explode(',', $item->getAppliedRuleIds()))) {
+        if($item->getAppliedRuleIds() === null || !in_array($ruleId, explode(',', $item->getAppliedRuleIds()))) {
             return;
         }
 
