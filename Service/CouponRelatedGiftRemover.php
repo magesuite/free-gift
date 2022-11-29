@@ -64,6 +64,10 @@ class CouponRelatedGiftRemover
 
     protected function removeRuleIdFromString($ruleId, $appliedRules)
     {
+        if($appliedRules === null) {
+            return '';
+        }
+
         $appliedRules = explode(',', $appliedRules);
         unset($appliedRules[array_search($ruleId, $appliedRules)]);
 
