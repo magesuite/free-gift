@@ -46,7 +46,7 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
         $quote->setIsMultiShipping(false);
         $quote->save();
 
-        $this->checkoutSession->setQuoteId($quote->getId());
+        $this->checkoutSession->replaceQuote($quote);
 
         $this->sendCouponCodeRequest([
             'remove' => 0,
