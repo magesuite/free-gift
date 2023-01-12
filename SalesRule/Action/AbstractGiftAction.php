@@ -61,6 +61,7 @@ abstract class AbstractGiftAction
 
         try {
             foreach ($freeGifts as $gift) {
+                $quote = $item->getQuote();
                 $itemQty = $gift->getQty();
 
                 if ($this->isMultipliedByProductQty()) {
@@ -68,7 +69,7 @@ abstract class AbstractGiftAction
                 }
 
                 if (!$this->isAppliedForEveryItemInCart() &&
-                    $this->ruleWasAlreadyUsed($item->getQuote(), $rule)
+                    $this->ruleWasAlreadyUsed($quote, $rule)
                 ) {
                     continue;
                 }
@@ -86,7 +87,8 @@ abstract class AbstractGiftAction
                 }
 
                 $addToCartRequest['product']->addCustomOption('rule_id', $rule->getId());
-                $quoteItem = $item->getQuote()->addProduct($addToCartRequest['product'], $addToCartRequest['request']);
+                $quoteItem = $quote->addProduct($addToCartRequest['product'], $addToCartRequest['request']);
+                $this->resetShippingAddressesCache($quote);
 
                 if (is_string($quoteItem)) {
                     throw new \Exception($quoteItem);
@@ -173,6 +175,16 @@ abstract class AbstractGiftAction
         return false;
     }
 
+    protected function resetShippingAddressesCache($quote): void
+    {
+        if (!$quote->isVirtual() && $quote->getShippingAddress()) {
+            $quote->getShippingAddress()->unsetData('cached_items_all');
+        }
+
+        $quote->getBillingAddress()->unsetData('cached_items_all');
+    }
+
     abstract protected function isAppliedForEveryItemInCart();
     abstract protected function isMultipliedByProductQty();
+
 }

@@ -5,10 +5,10 @@ namespace MageSuite\FreeGift\Test\Integration\Observer;
 
 class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\AbstractController
 {
-    protected ?\Magento\Framework\App\ObjectManager $objectManager;
-    protected ?\Magento\Checkout\Model\Cart $cart;
-    protected ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository;
-    protected ?\Magento\Quote\Api\CartRepositoryInterface $quoteRepository;
+    protected ?\Magento\Framework\App\ObjectManager $objectManager = null;
+    protected ?\Magento\Checkout\Model\Cart $cart = null;
+    protected ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository = null;
+    protected ?\Magento\Quote\Api\CartRepositoryInterface $quoteRepository = null;
 
     protected function setUp(): void
     {
@@ -43,6 +43,37 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
 
         $this->assertEquals(2, count($cartItems));
         $this->assertEquals('free-gift-product', $cartItems[1]->getSku());
+    }
+
+    /**
+     * @magentoAppIsolation enabled
+     * @magentoDbIsolation enabled
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/gift_discounted_by_half_sales_rule.php
+     */
+    public function testItAddsFreeGiftDiscountedBy50PercentToCart(): void
+    {
+        $product = $this->productRepository->get('simple_product_for_free_gift');
+
+        $parameters = [
+            'product' => $product->getId(),
+            'qty' => 1
+        ];
+
+        $cart = $this->cart;
+        $cart->addProduct($product, $parameters);
+        $quote = $cart->getQuote();
+
+        $quote->setTotalsCollectedFlag(false);
+        $quote->collectTotals();
+        $cart->save();
+
+        $quoteItems = $quote->getAllItems();
+
+        $this->assertEquals(2, count($quoteItems));
+        $this->assertEquals('free-gift-product', $quoteItems[1]->getSku());
+        $this->assertEquals(50, $quoteItems[1]->getRowTotal());
     }
 
     /**
