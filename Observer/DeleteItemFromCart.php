@@ -55,7 +55,7 @@ class DeleteItemFromCart implements \Magento\Framework\Event\ObserverInterface
 
         $appliedRules = $quoteItem->getAppliedRuleIds();
 
-        if ($appliedRules == null) {
+        if ($appliedRules === null) {
             return;
         }
 
