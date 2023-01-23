@@ -90,7 +90,7 @@ class DeleteItemFromCart implements \Magento\Framework\Event\ObserverInterface
     protected function removeAppliedRuleForAllItems($quote, $ruleId)
     {
         foreach ($quote->getAllItems() as $item) {
-            $appliedRuleIds = explode(',', $item->getAppliedRuleIds());
+            $appliedRuleIds = explode(',', (string)$item->getAppliedRuleIds());
 
             if (($key = array_search($ruleId, $appliedRuleIds)) !== false) {
                 unset($appliedRuleIds[$key]);
