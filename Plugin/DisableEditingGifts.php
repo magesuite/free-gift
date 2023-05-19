@@ -59,7 +59,7 @@ class DisableEditingGifts
             return $proceed();
         }
 
-        
+
         $this->messageManager->addError(__("Promotional item cannot be edited"));
 
         return $this->resultFactory
