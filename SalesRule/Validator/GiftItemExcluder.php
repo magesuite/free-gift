@@ -5,7 +5,7 @@ namespace MageSuite\FreeGift\SalesRule\Validator;
 /**
  * Validator for checking if item is valid to be used in SalesRules. Gifts must not be processed.
  */
-class GiftItemExcluder implements \Zend_Validate_Interface
+class GiftItemExcluder
 {
     /**
      * Gift items should not be processed by SalesRules
