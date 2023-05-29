@@ -3,4 +3,8 @@
     <type name="Magento\SalesRule\Model\Rule\Metadata\ValueProvider">
         <plugin name="freeproduct" type="MageSuite\FreeGift\Plugin\SalesRule\Model\MetadataValueProvider" sortOrder="10" />
     </type>
+
+    <type name="Magento\SalesRule\Model\Rule\Condition\Product">
+        <plugin name="rename_price_condition_attribute" type="MageSuite\FreeGift\Plugin\Rule\Condition\RenamePriceCondition" sortOrder="1" />
+    </type>
 </config>
