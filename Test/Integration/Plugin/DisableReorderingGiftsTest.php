@@ -43,7 +43,7 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
      * @var \Magento\SalesRule\Model\RuleRepository
      */
     protected $ruleRepository;
-    
+
     protected $quote;
 
     protected function setUp(): void
