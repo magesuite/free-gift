@@ -137,10 +137,18 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
     protected function removeGiftItemsRelatedToItemAndRule(
         \Magento\Quote\Model\Quote\Item\AbstractItem $item,
         \Magento\SalesRule\Model\Rule $rule
-    ):void {
+    ): void {
         $ruleId = (int) $rule->getId();
         $appliedRuleIds = $item->getAppliedRuleIds();
-        if (empty($appliedRuleIds) || !in_array($ruleId, explode(',', $appliedRuleIds))) {
+        if (empty($appliedRuleIds)) {
+            return;
+        }
+
+        if (!is_array($appliedRuleIds)) {
+            $appliedRuleIds = explode(',', $appliedRuleIds);
+        }
+
+        if (!in_array($ruleId, $appliedRuleIds)) {
             return;
         }
 
@@ -153,6 +161,10 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
             }
 
             $quote->deleteItem($toDeleteItem);
+
+            $rulesToSet = array_diff($appliedRuleIds, [$ruleId]);
+
+            $quote->getItemById($toDeleteItem->getId())->setAppliedRuleIds($rulesToSet);
         }
     }
 
