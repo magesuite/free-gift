@@ -206,6 +206,41 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
     /**
      * @magentoAppIsolation enabled
      * @magentoDbIsolation enabled
+     * @magentoAppArea frontend
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_cart_rule.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/coupon_cart_rule.php
+     */
+    public function testItRemovesFreeGiftFromCartWhenCouponCodeIsUsed(): void
+    {
+        $product = $this->productRepository->get('simple_product_for_free_gift');
+        $parameters = [
+            'product' => $product->getId(),
+            'qty' => 1
+        ];
+
+        $cart = $this->cart;
+        $cart->addProduct($product, $parameters);
+        $cart->save();
+
+        $quote = $cart->getQuote();
+        $quoteItemsBeforeApplyingCouponCode = $quote->getAllItems();
+
+        $this->assertEquals(2, count($quoteItemsBeforeApplyingCouponCode));
+
+        $quote->setCouponCode('CART_FIXED_DISCOUNT_100');
+        $quote->setTotalsCollectedFlag(false)->collectTotals();
+        $quote->save();
+
+        $quoteItemsAfterApplyingCouponCode = $quote->getAllItems();
+
+        $this->assertEquals(1, count($quoteItemsAfterApplyingCouponCode));
+    }
+
+    /**
+     * @magentoAppIsolation enabled
+     * @magentoDbIsolation enabled
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_sales_rule_no_coupon.php

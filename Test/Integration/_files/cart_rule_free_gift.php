@@ -26,33 +26,6 @@ $salesRule->setData(
         'is_label_visible_by_default' => 0,
         'customer_group_ids' => [\Magento\Customer\Model\GroupManagement::NOT_LOGGED_IN_ID],
         'coupon_type' => \Magento\SalesRule\Model\Rule::COUPON_TYPE_NO_COUPON,
-//        'conditions' => [
-//            [
-//                'type' => \Magento\SalesRule\Model\Rule\Condition\Address::class,
-//                'attribute' => 'base_subtotal_total_incl_tax',
-//                'operator' => '>',
-//                'value' => 9
-//            ]
-//        ],
-        'conditions' => [
-            [
-              "type" => Magento\SalesRule\Model\Rule\Condition\Combine::class,
-              "attribute" => null,
-              "operator" => null,
-              "value" => "1",
-              "is_value_processed" => null,
-              "aggregator" => "all",
-              "conditions" => [
-                [
-                    "type" => Magento\SalesRule\Model\Rule\Condition\Address::class,
-                    "attribute" => "base_subtotal_total_incl_tax",
-                    "operator" => ">",
-                    "value" => "9",
-                    "is_value_processed" => false
-                ]
-              ]
-            ]
-        ],
         'actions' => [
             [
               "type" => Magento\SalesRule\Model\Rule\Condition\Product\Combine::class,
