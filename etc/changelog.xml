@@ -13,6 +13,13 @@
                     </overview>
                 </entry>
             </tag>
+            <tag version="1.2.5" date="2023-11-14">
+                <entry>
+                    <type>CHORE</type>
+                    <overview>Add missing MGS-icon and changelog</overview>
+                    <ticket_id>MGS-1316</ticket_id>
+                </entry>
+            </tag>
         </changelog>
     </module>
 </config>
