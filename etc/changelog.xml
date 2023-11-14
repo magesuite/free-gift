@@ -13,7 +13,7 @@
                     </overview>
                 </entry>
             </tag>
-            <tag version="1.0.20" date="2023-03-27">
+            <tag version="1.2.5" date="2023-11-14">
                 <entry>
                     <type>CHORE</type>
                     <overview>Add missing MGS-icon and changelog</overview>
