@@ -45,7 +45,6 @@ class Uninstall implements UninstallInterface
             );
         }
 
-        // Remove column from quote_item table
         if ($setup->getConnection()->tableColumnExists(
             $setup->getTable('quote_item'),
             'is_gift'
