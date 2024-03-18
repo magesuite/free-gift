@@ -207,7 +207,7 @@ class Cart
         }
 
         if (is_numeric($parentProductId)) {
-            $parentProduct = $this->productRepository->getById($parentProductId, false, $storeId);
+            $parentProduct = $this->productRepository->getById($parentProductId, false, $storeId), true;
 
             $addToCartParams['product'] = $parentProduct->getId();
 
