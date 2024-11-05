@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="salesrule">
+        <column xsi:type="text" name="gift_skus" nullable="true" comment="Skus of gift products" />
+        <column xsi:type="text" name="gift_skus_discounts" nullable="true" comment="Discounts for gift products skus" />
+        <column xsi:type="text" name="gift_skus_qty" nullable="true" comment="Qtys for gift products skus" />
+    </table>
+    <table name="quote_item">
+        <column xsi:type="boolean" name="is_gift" nullable="false" default="0" comment="Is item a gift" />
+    </table>
+</schema>

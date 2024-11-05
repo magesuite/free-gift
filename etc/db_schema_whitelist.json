@@ -1,0 +1,14 @@
+{
+    "salesrule": {
+        "column": {
+            "gift_skus": true,
+            "gift_skus_discounts": true,
+            "gift_skus_qty": true
+        }
+    },
+    "quote_item": {
+        "column": {
+            "is_gift": true
+        }
+    }
+}
