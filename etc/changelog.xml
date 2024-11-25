@@ -27,6 +27,13 @@
                     <ticket_id>DOG-1838</ticket_id>
                 </entry>
             </tag>
+            <tag version="1.2.11" date="2024-11-22">
+                <entry>
+                    <type>FIX</type>
+                    <overview>Fix for applying more than one free gift.</overview>
+                    <ticket_id>TOYS-1553</ticket_id>
+                </entry>
+            </tag>
         </changelog>
     </module>
 </config>
