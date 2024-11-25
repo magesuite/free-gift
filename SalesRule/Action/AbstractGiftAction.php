@@ -60,12 +60,10 @@ abstract class AbstractGiftAction
         $freeGifts = $this->ruleToFreeGiftsConverter->getFreeGifts($rule);
 
         try {
-            $quote = $item->getQuote();
-            $ruleWasAlreadyUsed = $this->ruleWasAlreadyUsed($quote, $rule);
-
             foreach ($freeGifts as $gift) {
+                $quote = $item->getQuote();
 
-                if ($ruleWasAlreadyUsed) {
+                if ($this->ruleWasAlreadyUsed($quote, $rule)) {
                     continue;
                 }
 
