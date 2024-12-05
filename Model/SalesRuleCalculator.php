@@ -46,18 +46,28 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
         $address = $item->getAddress();
         $rules = $this->_getRules($address);
 
+        $rulesIds = [];
+
         /** @var \Magento\SalesRule\Model\Rule $rule */
         foreach ($rules as $rule) {
+            $rulesIds[] = $rule->getId();
+
             if (!in_array($rule->getSimpleAction(), $this->supportedRules)) {
                 continue;
             }
 
-            if (!$this->canApplyRule($item, $rule, $address)) {
-                $this->removeGiftItemsRelatedToItemAndRule($item, $rule);
-                continue;
-            }
-
             $this->applyRule($rule, $item);
+        }
+
+        if (!$item->getIsGift()) {
+            return;
+        }
+
+        $ruleId = $this->getOption($item, 'rule_id');
+
+        if (!in_array($ruleId, $rulesIds)) {
+            $quote = $item->getQuote();
+            $quote->deleteItem($item);
         }
     }
 
@@ -184,5 +194,16 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
                 &&
                 $toDeleteItem->getOptionByCode('rule_id')->getValue() == $ruleId
             );
+    }
+
+    protected function getOption($quoteItem, $optionIdentifier)
+    {
+        $option = $quoteItem->getOptionByCode($optionIdentifier);
+
+        if ($option instanceof \Magento\Quote\Model\Quote\Item\Option) {
+            return $option->getValue();
+        }
+        
+        return null;
     }
 }
