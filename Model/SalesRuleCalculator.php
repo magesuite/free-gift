@@ -56,6 +56,11 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
                 continue;
             }
 
+            if (!$this->canApplyRule($item, $rule, $address)) {
+                $this->removeGiftItemsRelatedToItemAndRule($item, $rule);
+                continue;
+            }
+
             $this->applyRule($rule, $item);
         }
 
@@ -203,7 +208,7 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
         if ($option instanceof \Magento\Quote\Model\Quote\Item\Option) {
             return $option->getValue();
         }
-        
+
         return null;
     }
 }
