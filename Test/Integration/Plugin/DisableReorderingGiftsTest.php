@@ -95,6 +95,8 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
 
         $this->customerSession->setCustomerId((string) $order->getCustomerId());
 
+        $this->objectManager->removeSharedInstance(\Magento\Checkout\Model\Session::class, true);
+
         $this->getRequest()->setMethod(\Magento\Framework\App\Request\Http::METHOD_POST);
         $this->getRequest()->setParam('order_id', $orderId);
         $this->dispatch('sales/order/reorder/');
