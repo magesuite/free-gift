@@ -76,9 +76,7 @@ $shippingAddress->setCollectShippingRates(true)
     ->setShippingMethod('flatrate_flatrate');
 
 /** @var Magento\Quote\Model\Quote\Payment $payment */
-$payment = $objectManager->create('Magento\Quote\Api\Data\PaymentInterface', ['data' => ['is_available' => true]]);
-$payment->setMethod('checkmo');
-$quote->setPayment($payment);
+$quote->getPayment()->setMethod('checkmo');
 $quote->setInventoryProcessed(false);
 $quote->collectTotals();
 $quote->save();
