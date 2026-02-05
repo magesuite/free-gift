@@ -1,54 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Test\Integration\Plugin;
 
 class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\AbstractController
 {
-    /**
-     * @var \Magento\Framework\App\ObjectManager
-     */
-    protected $objectManager;
+    protected ?\Magento\Framework\App\ObjectManager $objectManager;
+    protected ?\Magento\Quote\Model\ResourceModel\Quote\CollectionFactory $quoteCollectionFactory;
+    protected ?\Magento\Quote\Model\QuoteManagement $quoteManagement;
+    protected ?\Magento\Sales\Api\OrderRepositoryInterface $orderRepository;
+    protected ?\Magento\Checkout\Model\Session $checkoutSession;
+    protected ?\Magento\Customer\Model\Session $customerSession;
+    protected ?\Magento\Quote\Api\CartRepositoryInterface $quoteRepository;
+    protected ?\Magento\SalesRule\Model\RuleRepository $ruleRepository;
 
-    /**
-     * @var \Magento\Quote\Model\ResourceModel\Quote\CollectionFactory
-     */
-    protected $quoteCollectionFactory;
-
-    /**
-     * @var \Magento\Quote\Model\QuoteManagement
-     */
-    protected $quoteManagement;
-
-    /**
-     * @var \Magento\Sales\Api\OrderRepositoryInterface
-     */
-    protected $orderRepository;
-
-    /**
-     * @var \Magento\Checkout\Model\Session
-     */
-    protected $checkoutSession;
-
-    /**
-     * @var \Magento\Customer\Model\Session
-     */
-    protected $customerSession;
-
-    /**
-     * @var \Magento\Quote\Api\CartRepositoryInterface
-     */
-    protected $quoteRepository;
-
-    /**
-     * @var \Magento\SalesRule\Model\RuleRepository
-     */
-    protected $ruleRepository;
-
-    protected $quote;
+    protected ?\Magento\Quote\Api\Data\CartInterface $quote;
 
     protected function setUp(): void
     {
         parent::setUp();
+
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $this->quoteCollectionFactory = $this->objectManager->get(\Magento\Quote\Model\ResourceModel\Quote\CollectionFactory::class);
         $this->quoteManagement = $this->objectManager->get(\Magento\Quote\Model\QuoteManagement::class);
@@ -63,14 +35,15 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
      * @magentoAppIsolation disabled
      * @magentoDbIsolation enabled
      * @magentoAppArea frontend
-     * @magentoDataFixture loadProduct
-     * @magentoDataFixture loadFreeGiftProduct
-     * @magentoDataFixture loadFreeGiftSalesRuleNoCoupon
-     * @magentoDataFixture loadCustomer
-     * @magentoDataFixture loadQuote
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_sales_rule_no_coupon.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/customer.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/quote.php
      * @magentoConfigFixture default payment/checkmo/active 1
      */
-    public function testItDoesNotAddFreeGiftToCartDuringReorderingWhenGiftIsNotAvailableAnymore()
+    public function testItDoesNotAddFreeGiftToCartDuringReorderingWhenGiftIsNotAvailableAnymore(): void
     {
         $quote = $this->quoteCollectionFactory->create()
             ->addFieldToFilter('reserved_order_id', 10002)
@@ -110,30 +83,5 @@ class DisableReorderingGiftsTest extends \Magento\TestFramework\TestCase\Abstrac
         $quoteItems = $quoteItemsCollection->getItems();
 
         $this->assertEquals(1, count($quoteItems));
-    }
-
-    public static function loadProduct()
-    {
-        include __DIR__ . '/../_files/product.php';
-    }
-
-    public static function loadFreeGiftProduct()
-    {
-        include __DIR__ . '/../_files/free_gift_product.php';
-    }
-
-    public static function loadFreeGiftSalesRuleNoCoupon()
-    {
-        include __DIR__ . '/../_files/free_gift_sales_rule_no_coupon.php';
-    }
-
-    public static function loadCustomer()
-    {
-        include __DIR__ . '/../_files/customer.php';
-    }
-
-    public static function loadQuote()
-    {
-        include __DIR__ . '/../_files/quote.php';
     }
 }
