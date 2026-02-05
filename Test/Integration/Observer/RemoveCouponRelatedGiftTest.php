@@ -1,45 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Test\Integration\Observer;
 
 class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\AbstractController
 {
-    const QUOTE_RESERVED_ID = 'test01';
+    protected const QUOTE_RESERVED_ID = 'test01';
+    protected const FREE_GIFT_SKU = 'free-gift-product';
+    protected const COUPON_CODE = 'coupon_code';
 
-    const FREE_GIFT_SKU = 'free-gift-product';
-
-    const COUPON_CODE = 'coupon_code';
-
-    /**
-     * @var \Magento\Framework\App\ObjectManager
-     */
-    protected $objectManager;
-
-    /**
-     * @var \Magento\Checkout\Model\Session
-     */
-    protected $checkoutSession;
-
-    /**
-     * @var \Magento\Quote\Model\QuoteRepository
-     */
-    protected $quoteRepository;
+    protected ?\Magento\Framework\App\ObjectManager $objectManager;
+    protected ?\Magento\Checkout\Model\Session $checkoutSession;
+    protected ?\Magento\Quote\Model\QuoteRepository $quoteRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
+        
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $this->checkoutSession = $this->objectManager->get(\Magento\Checkout\Model\Session::class);
         $this->quoteRepository = $this->objectManager->get(\Magento\Quote\Model\QuoteRepository::class);
     }
 
     /**
-     * @magentoDataFixture freeGiftOnceSalesRuleFixture
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_once_sales_rule_with_coupon.php
      * @magentoDataFixture Magento/Sales/_files/quote.php
      * @magentoDbIsolation enabled
      * @magentoAppIsolation enabled
      */
-    public function testFreeGiftItemIsRemovedFromCartAfterRemovingCoupon()
+    public function testFreeGiftItemIsRemovedFromCartAfterRemovingCoupon(): void
     {
         $quote = $this->getQuote();
         // From Magento 2.4.3 following setting being set to true caused incorrect totals calculation in the test
@@ -67,14 +57,14 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
         self::assertEquals('simple', $quote->getItems()[0]->getSku());
     }
 
-    protected function sendCouponCodeRequest($inputData)
+    protected function sendCouponCodeRequest(array $inputData): void
     {
         $this->getRequest()->setMethod(\Magento\Framework\App\Request\Http::METHOD_POST);
         $this->getRequest()->setParams($inputData);
         $this->dispatch('checkout/cart/couponPost/');
     }
 
-    protected function getQuote()
+    protected function getQuote(): \Magento\Quote\Api\Data\CartInterface
     {
         /** @var \Magento\Framework\Api\SearchCriteriaBuilderFactory $searchCriteriaBuilderFactory */
         $searchCriteriaBuilderFactory = $this->objectManager->get(\Magento\Framework\Api\SearchCriteriaBuilderFactory::class);
@@ -85,10 +75,5 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
         $quotes = $quoteRepository->getList($searchCriteria)->getItems();
 
         return array_pop($quotes);
-    }
-
-    public static function  freeGiftOnceSalesRuleFixture()
-    {
-        require __DIR__ . '/../_files/free_gift_once_sales_rule_with_coupon.php';
     }
 }
