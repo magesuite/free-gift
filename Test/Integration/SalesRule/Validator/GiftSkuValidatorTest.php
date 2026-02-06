@@ -23,7 +23,7 @@ class GiftSkuValidatorTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @dataProvider provider
+     * @dataProvider getTestData
      */
     public function testItValidatesGiftSkuCorrectly(string $skus, bool $expected): void
     {
@@ -32,7 +32,7 @@ class GiftSkuValidatorTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expected, $this->giftSkuValidator->isValid($rule));
     }
 
-    protected function provider(): array
+    public static function getTestData(): array
     {
         return [
             ['sku1,sku2,sku3', false],

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Test\Integration\Model;
 
 class QuoteTest extends \PHPUnit\Framework\TestCase
@@ -25,13 +26,6 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
      * @magentoDataFixture Magento/Sales/_files/quote.php
      * @dataProvider qtyDataProvider
-     *
-     * @param int $initialQty
-     * @param int $updatedQty
-     * @param int $expectedSummaryQty
-     * @param float $expectedSubtotalAmount
-     * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function testRuleFreeGiftQuotItemsUpdateQty(
         int $initialQty,
@@ -57,18 +51,8 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expectedSubtotalAmount, $subtotalAmount);
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote $quote
-     * @param \Magento\Catalog\Api\Data\ProductInterface $product
-     * @param int $qty
-     * @return \Magento\Quote\Model\Quote\Item
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    protected function addProductToQuote(
-        \Magento\Quote\Model\Quote $quote,
-        \Magento\Catalog\Api\Data\ProductInterface $product,
-        int $qty
-    ):\Magento\Quote\Model\Quote\Item {
+    protected function addProductToQuote(\Magento\Quote\Model\Quote $quote, \Magento\Catalog\Api\Data\ProductInterface $product, int $qty): \Magento\Quote\Model\Quote\Item
+    {
         $buyRequest = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Framework\DataObject::class,
             [
@@ -82,20 +66,8 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
         return $quote->addProduct($product, $buyRequest);
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote $quote
-     * @param \Magento\Quote\Model\Quote\Item $item
-     * @param \Magento\Catalog\Api\Data\ProductInterface $product
-     * @param int $qty
-     * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    protected function updateQuoteItemQty(
-        \Magento\Quote\Model\Quote $quote,
-        \Magento\Quote\Model\Quote\Item $item,
-        \Magento\Catalog\Api\Data\ProductInterface $product,
-        int $qty
-    ):void {
+    protected function updateQuoteItemQty(\Magento\Quote\Model\Quote $quote, \Magento\Quote\Model\Quote\Item $item, \Magento\Catalog\Api\Data\ProductInterface $product, int $qty): void
+    {
         $buyRequest = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Framework\DataObject::class,
             [
@@ -108,10 +80,7 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
         $quote->updateItem((int)$item->getId(), $buyRequest);
     }
 
-    /**
-     * @return \int[][]
-     */
-    public static function qtyDataProvider():array
+    public static function qtyDataProvider(): array
     {
         return [
             'Increase Qty' => [1, 2, 4, 300.0],
@@ -119,10 +88,6 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    /**
-     * @param \Magento\Framework\Api\ExtensibleDataInterface $entity
-     * @return array
-     */
     protected function convertToArray(\Magento\Framework\Api\ExtensibleDataInterface $entity): array
     {
         return $this->objectManager
