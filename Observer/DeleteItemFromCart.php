@@ -1,111 +1,99 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Observer;
 
 class DeleteItemFromCart implements \Magento\Framework\Event\ObserverInterface
 {
-    /**
-     * @var \Magento\Checkout\Model\Session
-     */
-    private $checkoutSession;
-
     public function __construct(
-        \Magento\Checkout\Model\Session $checkoutSession
-    )
-    {
-        $this->checkoutSession = $checkoutSession;
+        protected \Magento\Checkout\Model\Session $checkoutSession,
+        protected \MageSuite\FreeGift\Service\GiftItem $giftItem
+    ) {
     }
 
     /**
-     * Delete all gift items related to deleted product.
+     * Delete all gift items related to the deleted product.
      * They will be re-added by SalesRule (If possible).
      * @event sales_quote_address_collect_totals_before
-     * @param \Magento\Framework\Event\Observer $observer
-     * @return void
      */
-    public function execute(\Magento\Framework\Event\Observer $observer)
+    public function execute(\Magento\Framework\Event\Observer $observer): void
     {
         /** @var \Magento\Quote\Model\Quote\Item $quote */
         $quoteItem = $observer->getEvent()->getData('quote_item');
         $quote = $quoteItem->getQuote();
 
-
-        if($quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU)
-            instanceof \Magento\Quote\Model\Quote\Item\Option) {
-
-            if($quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ITEM_OPTION_COUPON_GIFT) == true){
-                $checkoutSession = $this->checkoutSession;
-
-                $initialCouponGiftCount = $checkoutSession->getInitialCouponFreeGiftItems();
-
-                $updatedCouponGiftCount = $initialCouponGiftCount - 1;
-
-                if($updatedCouponGiftCount == 0){
-                    $checkoutSession->setUpdatedCouponGiftCount(0);
-                    $checkoutSession->setCanIncreaseCouponUsage(false);
-                    return;
-                }
-
-                $checkoutSession->setUpdatedCouponGiftCount($updatedCouponGiftCount);
-            }
+        if ($quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU) instanceof \Magento\Quote\Model\Quote\Item\Option) {
+            $this->processRemovedGiftItem($quoteItem);
             return;
         }
 
         $productSku = $quoteItem->getProduct()->getSku();
-
-        $appliedRules = $quoteItem->getAppliedRuleIds();
-
-        if ($appliedRules === null) {
+        $appliedRules = (string)$quoteItem->getAppliedRuleIds();
+        if (trim($appliedRules) === '') {
+            $this->removeRelatedGiftsWithRuleIdsFromQuoteItems($quote, $productSku);
             return;
         }
 
-        $appliedRules = explode(',', $appliedRules);
-
-        foreach ($appliedRules as $ruleId) {
-            foreach ($quote->getAllItems() as $toDeleteItem) {
-                if (
-                    $this->hasOptionWithValue($toDeleteItem, \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU, $productSku)
-                    and
-                    $this->hasOptionWithValue($toDeleteItem, 'rule_id', $ruleId)
-                ) {
-                    $quote->deleteItem($toDeleteItem);
-
-                    if ($this->hasOptionWithValue($toDeleteItem, \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::GIFT_ADDED_ONCE, true)) {
-                        $this->removeAppliedRuleForAllItems($quote, $ruleId);
-                    }
-                }
-            }
-        }
-
+        $this->removeRelatedGiftsByAppliedRules($quote, $productSku, $appliedRules);
         $quoteItem->setAppliedRuleIds(null);
     }
 
-    /**
-     * Removes applied rule id from all quote items
-     * This is done only when "gift added once per cart" is removed
-     * Rule id must be removed from other items so it can be recalculated again against remaining cart items
-     * @param $quote
-     * @param $ruleId
-     */
-    protected function removeAppliedRuleForAllItems($quote, $ruleId)
+    protected function processRemovedGiftItem(\Magento\Quote\Api\Data\CartItemInterface $quoteItem): void
     {
-        foreach ($quote->getAllItems() as $item) {
-            $appliedRuleIds = explode(',', (string)$item->getAppliedRuleIds());
+        if (!$quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ITEM_OPTION_COUPON_GIFT)) {
+            return;
+        }
 
-            if (($key = array_search($ruleId, $appliedRuleIds)) !== false) {
-                unset($appliedRuleIds[$key]);
+        $initialCouponGiftCount = $this->checkoutSession->getInitialCouponFreeGiftItems();
+        $updatedCouponGiftCount = $initialCouponGiftCount - 1;
+
+        if ($updatedCouponGiftCount == 0) {
+            $this->checkoutSession->setUpdatedCouponGiftCount(0);
+            $this->checkoutSession->setCanIncreaseCouponUsage(false);
+            return;
+        }
+
+        $this->checkoutSession->setUpdatedCouponGiftCount($updatedCouponGiftCount);
+    }
+
+    protected function removeRelatedGiftsWithRuleIdsFromQuoteItems(\Magento\Quote\Api\Data\CartInterface $quote, string $productSku): void
+    {
+        foreach ($quote->getAllItems() as $toDeleteItem) {
+            $ruleId = $this->giftItem->getRuleId($toDeleteItem);
+            if ($ruleId === null || !$this->giftItem->isRelatedToProductAndRule($toDeleteItem, $productSku, $ruleId)) {
+                continue;
             }
 
-            $item->setAppliedRuleIds(implode(',', $appliedRuleIds));
+            $this->deleteRelatedGiftItem($quote, $toDeleteItem, $ruleId);
         }
     }
 
-    protected function hasOptionWithValue($quoteItem, $optionIdentifier, $optionValue)
+    protected function removeRelatedGiftsByAppliedRules(\Magento\Quote\Api\Data\CartInterface $quote, string $productSku, string $appliedRules): void
     {
-        return (
-            $quoteItem->getOptionByCode($optionIdentifier) instanceof \Magento\Quote\Model\Quote\Item\Option
-            and
-            $quoteItem->getOptionByCode($optionIdentifier)->getValue() == $optionValue
-        );
+        foreach (explode(',', $appliedRules) as $appliedRule) {
+            $ruleId = (int)trim($appliedRule);
+            if ($ruleId <= 0) {
+                continue;
+            }
+
+            foreach ($quote->getAllItems() as $toDeleteItem) {
+                if (!$this->giftItem->isRelatedToProductAndRule($toDeleteItem, $productSku, $ruleId)) {
+                    continue;
+                }
+
+                $this->deleteRelatedGiftItem($quote, $toDeleteItem, $ruleId);
+            }
+        }
+    }
+
+    protected function deleteRelatedGiftItem(\Magento\Quote\Api\Data\CartInterface $quote, \Magento\Quote\Api\Data\CartItemInterface $quoteItem, int $ruleId): void
+    {
+        $quote->deleteItem($quoteItem);
+        if (!$this->giftItem->isAddedOnce($quoteItem)) {
+            return;
+        }
+
+        $this->giftItem->removeRuleIdFromAllQuoteItems($quote, $ruleId);
     }
 }

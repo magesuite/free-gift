@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Test\Integration\Observer;
 
 class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\AbstractController
@@ -29,7 +30,6 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
     public function testItAddsFreeGiftToCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
-
         $parameters = [
             'product' => $product->getId(),
             'qty' => 1
@@ -55,7 +55,6 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
     public function testItAddsFreeGiftDiscountedBy50PercentToCart(): void
     {
         $product = $this->productRepository->get('simple_product_for_free_gift');
-
         $parameters = [
             'product' => $product->getId(),
             'qty' => 1
@@ -143,12 +142,11 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
      */
     public function testItAllowsForDecreasingAmountOfFreeGift(): void
     {
-        $product = $this->productRepository->get('simple_product_for_free_gift');
         $freeProduct = $this->productRepository->get('free-gift-product');
         $cart = $this->cart;
         $quoteId = $cart->getQuote()->getId();
         $quote = $this->quoteRepository->getActive($quoteId);
-        $quoteItem = $this->getQuoteItemByProductId($quote, (int) $freeProduct->getId());
+        $quoteItem = $this->getQuoteItemByProductId($quote, (int)$freeProduct->getId());
 
         $this->assertEquals(2, count($quote->getAllItems()));
         $this->assertEquals(5.0, $quoteItem->getQty());
@@ -163,7 +161,7 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
         $this->quoteRepository->save($quote);
         $quote->collectTotals();
 
-        $quoteItem = $this->getQuoteItemByProductId($quote, (int) $freeProduct->getId());
+        $quoteItem = $this->getQuoteItemByProductId($quote, (int)$freeProduct->getId());
 
         $this->assertEquals(2, count($quote->getAllItems()));
         $this->assertEquals(2.0, $quoteItem->getQty());
@@ -280,16 +278,149 @@ class AddGiftsAfterCollectingTotalsTest extends \Magento\TestFramework\TestCase\
     }
 
     /**
-     * @param \Magento\Quote\Model\Quote $quote
-     * @param int $productId
-     * @return \Magento\Quote\Model\Quote\Item|null
+     * @magentoAppIsolation enabled
+     * @magentoDbIsolation enabled
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture Magento/Catalog/_files/second_product_simple.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_sales_rule_add_once_with_subtotal_condition.php
      */
-    private function getQuoteItemByProductId(
-        \Magento\Quote\Model\Quote $quote,
-        int $productId
-    ): ?\Magento\Quote\Model\Quote\Item {
+    public function testItRemovesGiftAddedOnceWhenSubtotalFallsBelowThresholdAfterRemovingOtherProduct(): void
+    {
+        $firstProduct = $this->productRepository->get('simple2');
+        $secondProduct = $this->productRepository->get('simple_product_for_free_gift');
+
+        $cart = $this->cart;
+        $cart->addProduct(
+            $firstProduct,
+            [
+                'product' => $firstProduct->getId(),
+                'qty' => 6
+            ]
+        );
+        $cart->addProduct(
+            $secondProduct,
+            [
+                'product' => $secondProduct->getId(),
+                'qty' => 1
+            ]
+        );
+        $cart->save();
+
+        $quote = $cart->getQuote();
+        $this->assertEquals(3, count($quote->getAllItems()));
+
+        $giftItem = null;
+        $regularSecondProductItem = null;
+        foreach ($quote->getAllItems() as $item) {
+            if ($item->getSku() === 'free-gift-product' && $item->hasData('is_gift')) {
+                $giftItem = $item;
+            }
+
+            if ($item->getSku() === 'simple_product_for_free_gift') {
+                $regularSecondProductItem = $item;
+            }
+        }
+
+        $this->assertNotNull($giftItem);
+        $this->assertNotNull($regularSecondProductItem);
+
+        $quote->removeItem($regularSecondProductItem->getId());
+        $quote->save();
+
+        $remainingSkus = [];
+        foreach ($quote->getAllItems() as $item) {
+            $remainingSkus[] = $item->getSku();
+        }
+
+        $this->assertContains('simple2', $remainingSkus);
+        $this->assertNotContains('simple_product_for_free_gift', $remainingSkus);
+        $this->assertNotContains('free-gift-product', $remainingSkus);
+    }
+
+    /**
+     * @magentoAppIsolation enabled
+     * @magentoDbIsolation enabled
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
+     * @magentoDataFixture Magento/Catalog/_files/second_product_simple.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
+     * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_sales_rule_no_coupon.php
+     */
+    public function testItRemovesGiftAddedOnceRelatedToAnotherProductWhenQtyChanges(): void
+    {
+        $firstProduct = $this->productRepository->get('simple_product_for_free_gift');
+        $secondProduct = $this->productRepository->get('simple2');
+        $giftProduct = $this->productRepository->get('free-gift-product');
+
+        $cart = $this->cart;
+        $cart->addProduct(
+            $firstProduct,
+            [
+                'product' => $firstProduct->getId(),
+                'qty' => 1
+            ]
+        );
+        $cart->addProduct(
+            $secondProduct,
+            [
+                'product' => $secondProduct->getId(),
+                'qty' => 20
+            ]
+        );
+        $cart->save();
+
+        $quote = $cart->getQuote();
+        $this->assertEquals(3, count($quote->getAllItems()));
+
+        $giftItem = $this->getQuoteItemByProductId($quote, (int)$giftProduct->getId());
+        $secondProductItem = $this->getQuoteItemByProductId($quote, (int)$secondProduct->getId());
+        $this->assertNotNull($giftItem);
+        $this->assertNotNull($secondProductItem);
+        $this->assertInstanceOf(
+            \Magento\Quote\Model\Quote\Item\Option::class,
+            $giftItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU)
+        );
+        $this->assertSame(
+            'simple_product_for_free_gift',
+            $giftItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU)->getValue()
+        );
+
+        $quote->setData('gift_items_reseted', false);
+        $secondProductItem->setOrigData('qty', 20);
+        $secondProductItem->setQty(4);
+
+        $event = $this->objectManager->create(
+            \Magento\Framework\Event::class,
+            [
+                'data' => [
+                    'quote' => $quote
+                ]
+            ]
+        );
+        $observer = $this->objectManager->create(
+            \Magento\Framework\Event\Observer::class,
+            [
+                'data' => [
+                    'event' => $event
+                ]
+            ]
+        );
+        $this->objectManager->get(\MageSuite\FreeGift\Observer\ResetGiftItems::class)->execute($observer);
+
+        $remainingSkus = [];
+        foreach ($quote->getAllItems() as $item) {
+            $remainingSkus[] = $item->getSku();
+        }
+
+        $this->assertContains('simple_product_for_free_gift', $remainingSkus);
+        $this->assertContains('simple2', $remainingSkus);
+        $this->assertNotContains('free-gift-product', $remainingSkus);
+    }
+
+    protected function getQuoteItemByProductId(\Magento\Quote\Model\Quote $quote, int $productId): ?\Magento\Quote\Model\Quote\Item
+    {
         $quoteItem = null;
-        foreach ($quote->getItems() as $item) {
+        foreach ($quote->getAllItems() as $item) {
             if ($productId == $item->getProductId()) {
                 $quoteItem = $item;
             }
