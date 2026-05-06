@@ -1,98 +1,97 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Observer;
 
-use MageSuite\FreeGift\SalesRule\Action\GiftAction;
-
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-use Magento\Quote\Api\Data\ShippingAssignmentInterface;
-use Magento\Quote\Model\Quote;
-
-class ResetGiftItems implements ObserverInterface
+class ResetGiftItems implements \Magento\Framework\Event\ObserverInterface
 {
-    /**
-     * @var \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList
-     */
-    protected $quoteItemQtyList;
-
-    public function __construct(\Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList)
-    {
-        $this->quoteItemQtyList = $quoteItemQtyList;
+    public function __construct(
+        protected \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList,
+        protected \MageSuite\FreeGift\Service\GiftItem $giftItem
+    ) {
     }
 
     /**
-     * Delete related gift items when quantity of main item changed
-     *
-     * @event sales_quote_address_collect_totals_before
-     * @param Observer $observer
-     * @return void
+     * Delete related gift items when the quantity of the main item changed
      */
-    public function execute(\Magento\Framework\Event\Observer $observer)
+    public function execute(\Magento\Framework\Event\Observer $observer): void
     {
-        /** @var Quote $quote */
+        /** @var \Magento\Quote\Model\Quote $quote */
         $quote = $observer->getEvent()->getData('quote');
 
-        if ($quote->getData('gift_items_reseted')) {
+        if ($quote->getData('gift_items_reseted') || !$this->canResetGiftItems($quote)) {
             return;
+        }
+
+        /** @var \Magento\Quote\Model\Quote\Item $quoteItem */
+        foreach ($quote->getAllItems() as $quoteItem) {
+            $this->resetGiftItemsForChangedQuoteItem($quote, $quoteItem);
+        }
+
+        $quote->setData('gift_items_reseted', true);
+    }
+
+    protected function canResetGiftItems(\Magento\Quote\Model\Quote $quote): bool
+    {
+        if ($quote->getAllItems() == null) {
+            return false;
         }
 
         $address = $quote->getShippingAddress();
 
-        if ($quote->getAllItems() == null || $address->getAddressType() != Quote\Address::TYPE_SHIPPING)
-        {
+        return $address->getAddressType() == \Magento\Quote\Model\Quote\Address::TYPE_SHIPPING;
+    }
+
+    protected function resetGiftItemsForChangedQuoteItem(\Magento\Quote\Model\Quote $quote, \Magento\Quote\Model\Quote\Item $quoteItem): void
+    {
+        $originalProductSkuOption = $quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU);
+        if ($originalProductSkuOption instanceof \Magento\Quote\Model\Quote\Item\Option) {
             return;
         }
 
-        /** @var Quote\Item $quoteItem */
-        foreach ($quote->getAllItems() as $quoteItem)
-        {
-            if($quoteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU) instanceof Quote\Item\Option) {
-                continue;
-            }
-
-            $originalQty = (int)$quoteItem->getOrigData('qty');
-
-            if($originalQty <= 0) {
-                continue;
-            }
-
-            $currentQty = $quoteItem->getQty();
-
-            if($originalQty != $currentQty) {
-                $productSku = $quoteItem->getProduct()->getSku();
-                $appliedRules = $quoteItem->getAppliedRuleIds();
-
-                if($appliedRules == null) {
-                    continue;
-                }
-
-                $appliedRules = explode(',', $appliedRules);
-
-                foreach($appliedRules as $ruleId) {
-                    foreach($quote->getAllItems() as $toDeleteItem) {
-                        if((
-                            $toDeleteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU) instanceof Quote\Item\Option
-                            and
-                            $toDeleteItem->getOptionByCode(\MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU)->getValue() == $productSku
-                        )
-                            and
-                        (
-                            $toDeleteItem->getOptionByCode('rule_id') instanceof Quote\Item\Option
-                            and
-                            $toDeleteItem->getOptionByCode('rule_id')->getValue() == $ruleId
-                        ))
-                        {
-                            $quote->deleteItem($toDeleteItem);
-                            $this->quoteItemQtyList->removeQuoteItem($toDeleteItem->getId());
-                        }
-                    }
-                }
-
-                $quoteItem->setAppliedRuleIds(null);
-            }
+        $originalQty = (int)$quoteItem->getOrigData('qty');
+        if ($originalQty <= 0 || $originalQty == $quoteItem->getQty()) {
+            return;
         }
 
-        $quote->setData('gift_items_reseted', true);
+        $appliedRules = $quoteItem->getAppliedRuleIds();
+        if ($appliedRules == null) {
+            return;
+        }
+
+        $productSku = $quoteItem->getProduct()->getSku();
+        foreach (explode(',', $appliedRules) as $ruleId) {
+            $this->removeRelatedGiftItems($quote, $productSku, (int)trim($ruleId));
+        }
+
+        $quoteItem->setAppliedRuleIds(null);
+    }
+
+    protected function removeRelatedGiftItems(\Magento\Quote\Model\Quote $quote, string $productSku, int $ruleId): void
+    {
+        if ($ruleId <= 0) {
+            return;
+        }
+
+        foreach ($quote->getAllItems() as $toDeleteItem) {
+            if (!$this->giftItem->isRelatedToProductAndRule($toDeleteItem, $productSku, $ruleId)) {
+                continue;
+            }
+
+            $this->removeGiftItem($quote, $toDeleteItem, $ruleId);
+        }
+    }
+
+    protected function removeGiftItem(\Magento\Quote\Model\Quote $quote, \Magento\Quote\Model\Quote\Item $quoteItem, int $ruleId): void
+    {
+        $quote->deleteItem($quoteItem);
+        $this->quoteItemQtyList->removeQuoteItem($quoteItem->getId());
+
+        if (!$this->giftItem->isAddedOnce($quoteItem)) {
+            return;
+        }
+
+        $this->giftItem->removeRuleIdFromAllQuoteItems($quote, $ruleId);
     }
 }

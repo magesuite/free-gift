@@ -1,27 +1,20 @@
 <?php
 
 declare(strict_types=1);
+
 namespace MageSuite\FreeGift\Model;
 
 class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 {
     protected bool $isProcessed = false;
+    protected ?\MageSuite\FreeGift\Service\GiftItem $giftItem = null;
     protected array $supportedRules = [
         \MageSuite\FreeGift\SalesRule\Action\GiftAction::ACTION,
         \MageSuite\FreeGift\SalesRule\Action\GiftOnceAction::ACTION
     ];
 
-    /**
-     * @param array $items
-     * @param \Magento\Quote\Api\Data\CartInterface $quote
-     * @return void
-     * @throws \Zend_Db_Select_Exception
-     * @throws \Zend_Validate_Exception
-     */
-    public function processAllItems(
-        array $items,
-        \Magento\Quote\Api\Data\CartInterface $quote
-    ):void {
+    public function processAllItems(array $items, \Magento\Quote\Api\Data\CartInterface $quote): void
+    {
         foreach ($items as $item) {
             $this->process($item);
         }
@@ -32,17 +25,8 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
         }
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @return void
-     * @throws \Zend_Db_Select_Exception
-     * @throws \Zend_Validate_Exception
-     */
-    public function process(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
-        ?\Magento\SalesRule\Model\Rule $rule = null
-    ) {
+    public function process(\Magento\Quote\Model\Quote\Item\AbstractItem $item, ?\Magento\SalesRule\Model\Rule $rule = null): self
+    {
         $address = $item->getAddress();
         $rules = $this->_getRules($address);
 
@@ -65,29 +49,21 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
         }
 
         if (!$item->getIsGift()) {
-            return;
+            return $this;
         }
 
-        $ruleId = $this->getOption($item, 'rule_id');
+        $ruleId = $this->getGiftItem()->getRuleId($item);
 
         if (!in_array($ruleId, $rulesIds)) {
             $quote = $item->getQuote();
             $quote->deleteItem($item);
         }
+
+        return $this;
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @param \Magento\Quote\Api\Data\AddressInterface $address
-     * @return bool
-     * @throws \Zend_Validate_Exception
-     */
-    protected function canApplyRule(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
-        \Magento\SalesRule\Model\Rule $rule,
-        \Magento\Quote\Api\Data\AddressInterface $address
-    ):bool {
+    protected function canApplyRule(\Magento\Quote\Model\Quote\Item\AbstractItem $item, \Magento\SalesRule\Model\Rule $rule, \Magento\Quote\Api\Data\AddressInterface $address): bool
+    {
         if (!$this->canApplyDiscount($item)) {
             return false;
         }
@@ -120,17 +96,10 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
         return true;
     }
 
-    /**
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @return bool
-     */
-    protected function applyRule(
-        \Magento\SalesRule\Model\Rule $rule,
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item
-    ):bool {
+    protected function applyRule(\Magento\SalesRule\Model\Rule $rule, \Magento\Quote\Model\Quote\Item\AbstractItem $item): bool
+    {
         /** @var \Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory $calculatorFactory */
-        $calculatorFactory = \Magento\Framework\App\ObjectManager::getInstance()->create(\Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory::class);
+        $calculatorFactory = \Magento\Framework\App\ObjectManager::getInstance()->create(\Magento\SalesRule\Model\Rule\Action\Discount\CalculatorFactory::class); //phpcs:ignore
         /** @var \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction $ruleCalculator */
         $ruleCalculator = $calculatorFactory->create($rule->getSimpleAction());
 
@@ -142,19 +111,12 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
             return false;
         }
 
-        return $ruleCalculator->calculate($rule, $item, (float) $item->getTotalQty(), true);
+        return $ruleCalculator->calculate($rule, $item, (float)$item->getTotalQty(), true);
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
-     * @param \Magento\SalesRule\Model\Rule $rule
-     * @return void
-     */
-    protected function removeGiftItemsRelatedToItemAndRule(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $item,
-        \Magento\SalesRule\Model\Rule $rule
-    ):void {
-        $ruleId = (int) $rule->getId();
+    protected function removeGiftItemsRelatedToItemAndRule(\Magento\Quote\Model\Quote\Item\AbstractItem $item, \Magento\SalesRule\Model\Rule $rule): void
+    {
+        $ruleId = (int)$rule->getId();
         $appliedRuleIds = $item->getAppliedRuleIds();
         if (empty($appliedRuleIds) || !in_array($ruleId, explode(',', $appliedRuleIds))) {
             return;
@@ -162,53 +124,27 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 
         $quote = $item->getQuote();
         $productSku = $item->getProduct()->getSku();
+        $giftItem = $this->getGiftItem();
 
         foreach ($quote->getAllItems() as $toDeleteItem) {
-            if (!$this->isRelatedGiftItem($toDeleteItem, $productSku, $ruleId)) {
+            if (!$giftItem->isRelatedToProductAndRule($toDeleteItem, $productSku, $ruleId)) {
                 continue;
             }
 
             $quote->deleteItem($toDeleteItem);
+            if ($giftItem->isAddedOnce($toDeleteItem)) {
+                $giftItem->removeRuleIdFromAllQuoteItems($quote, $ruleId);
+            }
         }
     }
 
-    /**
-     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $toDeleteItem
-     * @param string $productSku
-     * @param int $ruleId
-     * @return bool
-     */
-    protected function isRelatedGiftItem(
-        \Magento\Quote\Model\Quote\Item\AbstractItem $toDeleteItem,
-        string $productSku,
-        int $ruleId
-    ):bool {
-        return
-            (
-                $toDeleteItem->getOptionByCode(
-                    \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU
-                ) instanceof \Magento\Quote\Model\Quote\Item\Option
-                &&
-                $toDeleteItem->getOptionByCode(
-                    \MageSuite\FreeGift\SalesRule\Action\AbstractGiftAction::ORIGINAL_PRODUCT_SKU
-                )->getValue() == $productSku
-            )
-            &&
-            (
-                $toDeleteItem->getOptionByCode('rule_id') instanceof \Magento\Quote\Model\Quote\Item\Option
-                &&
-                $toDeleteItem->getOptionByCode('rule_id')->getValue() == $ruleId
-            );
-    }
-
-    protected function getOption($quoteItem, $optionIdentifier)
+    protected function getGiftItem(): \MageSuite\FreeGift\Service\GiftItem
     {
-        $option = $quoteItem->getOptionByCode($optionIdentifier);
-
-        if ($option instanceof \Magento\Quote\Model\Quote\Item\Option) {
-            return $option->getValue();
+        if ($this->giftItem === null) {
+            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+            $this->giftItem = $objectManager->get(\MageSuite\FreeGift\Service\GiftItem::class);
         }
 
-        return null;
+        return $this->giftItem;
     }
 }
