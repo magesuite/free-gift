@@ -22,9 +22,7 @@ class GiftSkuValidatorTest extends \PHPUnit\Framework\TestCase
         $this->ruleFactory = $this->objectManager->get(\Magento\SalesRule\Model\RuleFactory::class);
     }
 
-    /**
-     * @dataProvider getTestData
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('getTestData')]
     public function testItValidatesGiftSkuCorrectly(string $skus, bool $expected): void
     {
         $rule = $this->ruleFactory->create();

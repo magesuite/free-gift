@@ -25,8 +25,8 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/free_gift_product.php
      * @magentoDataFixture MageSuite_FreeGift::Test/Integration/_files/product.php
      * @magentoDataFixture Magento/Sales/_files/quote.php
-     * @dataProvider qtyDataProvider
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('qtyDataProvider')]
     public function testRuleFreeGiftQuotItemsUpdateQty(
         int $initialQty,
         int $updatedQty,
