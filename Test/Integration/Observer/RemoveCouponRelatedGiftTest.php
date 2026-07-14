@@ -17,7 +17,7 @@ class RemoveCouponRelatedGiftTest extends \Magento\TestFramework\TestCase\Abstra
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $this->checkoutSession = $this->objectManager->get(\Magento\Checkout\Model\Session::class);
         $this->quoteRepository = $this->objectManager->get(\Magento\Quote\Model\QuoteRepository::class);
