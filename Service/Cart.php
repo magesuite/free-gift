@@ -43,36 +43,56 @@ class Cart
      * @var \Magento\Framework\App\RequestInterface
      */
     protected $request;
+
     /**
      * @var \Magento\Framework\App\RequestInterface
      */
     protected $response;
+
     /**
      * @var \Magento\Framework\DataObject\Factory
      */
     protected $dataObjectFactory;
+
     /**
      * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $storeManager;
+
     /**
      * @var \Magento\CatalogInventory\Api\StockStateInterface
      */
     protected $stockState;
+
     /**
      * @var \Magento\Framework\App\Config\ScopeConfigInterface
      */
     protected $scopeConfig;
 
     /**
-     * @var \Magento\InventorySalesApi\Api\StockResolverInterface
+     * @var \MageSuite\FreeGift\Model\Factory\GetStockItemDataFactory
      */
-    protected $stockResolver;
+    protected $getStockItemDataFactory;
 
     /**
-     * @var \Magento\InventorySalesApi\Model\GetStockItemDataInterface
+     * @var \MageSuite\FreeGift\Model\Factory\StockResolverFactory
      */
-    protected $stockItemData;
+    protected $stockResolverFactory;
+
+    /**
+     * @var \MageSuite\FreeGift\Model\Factory\SalesChannelFactory
+     */
+    protected $salesChannelFactory;
+
+    /**
+     * @var \Magento\CatalogInventory\Api\StockRegistryInterface
+     */
+    protected $stockRegistry;
+
+    /**
+     * @var \MageSuite\FreeGift\Model\ConfigProvider
+     */
+    protected $configProvider;
 
     /**
      * @param \Magento\Framework\Data\Form\FormKey $formKey
@@ -88,8 +108,11 @@ class Cart
      * @param \Magento\CatalogInventory\Api\StockStateInterface $stockState
      * @param \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\InventorySalesApi\Api\StockResolverInterface $stockResolver
-     * @param \Magento\InventorySalesApi\Model\GetStockItemDataInterface $stockItemData
+     * @param \MageSuite\FreeGift\Model\Factory\StockResolverFactory $stockResolverFactory
+     * @param \MageSuite\FreeGift\Model\Factory\GetStockItemDataFactory $getStockItemDataFactory
+     * @param \MageSuite\FreeGift\Model\Factory\SalesChannelFactory $salesChannelFactory
+     * @param \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry
+     * @param \MageSuite\FreeGift\Model\ConfigProvider $configProvider
      */
     public function __construct(
         \Magento\Framework\Data\Form\FormKey $formKey,
@@ -105,8 +128,11 @@ class Cart
         \Magento\CatalogInventory\Api\StockStateInterface $stockState,
         \Magento\CatalogInventory\Model\Quote\Item\QuantityValidator\QuoteItemQtyList $quoteItemQtyList,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\InventorySalesApi\Api\StockResolverInterface $stockResolver,
-        \Magento\InventorySalesApi\Model\GetStockItemDataInterface $stockItemData
+        \MageSuite\FreeGift\Model\Factory\StockResolverFactory $stockResolverFactory,
+        \MageSuite\FreeGift\Model\Factory\GetStockItemDataFactory $getStockItemDataFactory,
+        \MageSuite\FreeGift\Model\Factory\SalesChannelFactory $salesChannelFactory,
+        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
+        \MageSuite\FreeGift\Model\ConfigProvider $configProvider
     )
     {
         $this->formKey = $formKey;
@@ -122,8 +148,11 @@ class Cart
         $this->stockState = $stockState;
         $this->quoteItemQtyList = $quoteItemQtyList;
         $this->scopeConfig = $scopeConfig;
-        $this->stockResolver = $stockResolver;
-        $this->stockItemData = $stockItemData;
+        $this->stockResolverFactory = $stockResolverFactory;
+        $this->getStockItemDataFactory = $getStockItemDataFactory;
+        $this->salesChannelFactory = $salesChannelFactory;
+        $this->stockRegistry = $stockRegistry;
+        $this->configProvider = $configProvider;
     }
 
     public function add($productId, $qty) {
@@ -134,7 +163,11 @@ class Cart
         $parentProductsIds = $this->configurableProduct->getParentIdsByChild($productId);
         $parentProductId = !empty($parentProductsIds) ? $parentProductsIds[0] : null;
 
-        $qty = $this->determineQty($qty, $product);
+        if ($this->configProvider->isMsiEnabled()) {
+            $qty = $this->determineQty($qty, $product);
+        } else {
+            $qty = $this->determineQtyWithoutMsi($qty, $product);
+        }
 
         $addToCartParams = array(
             'form_key' => $this->formKey->getFormKey(),
@@ -193,7 +226,11 @@ class Cart
         $parentProductsIds = $this->configurableProduct->getParentIdsByChild($product->getId());
         $parentProductId = !empty($parentProductsIds) ? $parentProductsIds[0] : null;
 
-        $qty = $this->determineQty($qty, $product);
+        if ($this->configProvider->isMsiEnabled()) {
+            $qty = $this->determineQty($qty, $product);
+        } else {
+            $qty = $this->determineQtyWithoutMsi($qty, $product);
+        }
 
         if($qty == 0) {
             return null;
@@ -207,7 +244,7 @@ class Cart
         }
 
         if (is_numeric($parentProductId)) {
-            $parentProduct = $this->productRepository->getById($parentProductId, false, $storeId);
+            $parentProduct = $this->productRepository->getById($parentProductId, false, $storeId, true);
 
             $addToCartParams['product'] = $parentProduct->getId();
 
@@ -242,17 +279,23 @@ class Cart
     }
 
     /**
+     * Get determineQty with MSI module
+     *
      * @param $qty
      * @param $product
      * @return float
      */
     protected function determineQty($requestedQty, $product)
     {
+        $salesChannel = $this->salesChannelFactory->create();
+        $getStockItemData = $this->getStockItemDataFactory->create();
+        $stockResolver = $this->stockResolverFactory->create();
+
         $availableQuantity = 0.0;
 
         $websiteCode = $product->getStore()->getWebsite()->getCode();
-        $stockId = $this->stockResolver->execute(\Magento\InventorySalesApi\Api\Data\SalesChannelInterface::TYPE_WEBSITE, $websiteCode)->getStockId();
-        $stockItemData = $this->stockItemData->execute($product->getSku(), $stockId);
+        $stockId = $stockResolver->execute($salesChannel::TYPE_WEBSITE, $websiteCode)->getStockId();
+        $stockItemData =$getStockItemData->execute($product->getSku(), $stockId);
 
         if (isset($stockItemData['quantity'])) {
             $availableQuantity = $stockItemData['quantity'];
@@ -278,6 +321,43 @@ class Cart
             return 0;
         }
 
+        return min($requestedQty, $availableQuantity);
+    }
+
+    /**
+     * Get determineQty without MSI module
+     *
+     * @param $requestedQty
+     * @param $product
+     * @return float
+     */
+    protected function determineQtyWithoutMsi($requestedQty, $product)
+    {
+        $availableQuantity = 0.0;
+
+        // Get stock item data
+        $stockItem = $this->stockRegistry->getStockItemBySku($product->getSku());
+        if ($stockItem && $stockItem->getIsInStock()) {
+            $availableQuantity = $stockItem->getQty();
+        }
+
+        $qtyAlreadyAddedToCart = 0;
+
+        // Calculate quantity already added to cart
+        foreach ($this->cart->getQuote()->getAllItems() as $quoteItem) {
+            if ($quoteItem->isDeleted()) {
+                continue;
+            }
+            if ($quoteItem->getProduct()->getId() != $product->getId()) {
+                continue;
+            }
+            $qtyAlreadyAddedToCart += $quoteItem->getQty();
+        }
+
+        $availableQuantity -= $qtyAlreadyAddedToCart;
+        if ($availableQuantity < 0) {
+            return 0;
+        }
         return min($requestedQty, $availableQuantity);
     }
 
