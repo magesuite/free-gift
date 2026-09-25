@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="magesuite_instant_purchase_order_items_resolved">
+        <observer name="remove_gifts_from_resolved_order_items" instance="MageSuite\FreeGift\Observer\RemoveGiftsFromResolvedOrderItems" />
+    </event>
+</config>
