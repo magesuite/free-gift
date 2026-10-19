@@ -15,14 +15,34 @@ class SalesRuleCalculator extends \Magento\SalesRule\Model\Validator
 
     public function processAllItems(array $items, \Magento\Quote\Api\Data\CartInterface $quote): void
     {
+        $itemsStateBeforeProcessing = $this->getItemsState($quote);
+
         foreach ($items as $item) {
             $this->process($item);
         }
 
-        if (!$this->isProcessed) {
-            $this->isProcessed = true;
-            $quote->collectTotals();
+        if ($this->isProcessed) {
+            return;
         }
+
+        $this->isProcessed = true;
+
+        if ($this->getItemsState($quote) === $itemsStateBeforeProcessing) {
+            return;
+        }
+
+        $quote->collectTotals();
+    }
+
+    protected function getItemsState(\Magento\Quote\Api\Data\CartInterface $quote): array
+    {
+        $itemsState = [];
+
+        foreach ($quote->getItemsCollection() as $item) {
+            $itemsState[spl_object_id($item)] = [(float)$item->getQty(), (string)$item->getAppliedRuleIds(), $item->isDeleted()];
+        }
+
+        return $itemsState;
     }
 
     public function process(\Magento\Quote\Model\Quote\Item\AbstractItem $item, ?\Magento\SalesRule\Model\Rule $rule = null): self
