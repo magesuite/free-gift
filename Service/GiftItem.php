@@ -28,6 +28,17 @@ class GiftItem
         return $this->getOptionValue($quoteItem, self::OPTION_GIFT_ADDED_ONCE) == true;
     }
 
+    public function getOriginalProductSku(\Magento\Quote\Model\Quote\Item\AbstractItem $quoteItem): ?string
+    {
+        $originalProductSku = $this->getOptionValue($quoteItem, self::OPTION_ORIGINAL_PRODUCT_SKU);
+
+        if ($originalProductSku === null) {
+            return null;
+        }
+
+        return (string)$originalProductSku;
+    }
+
     public function getRuleId(\Magento\Quote\Model\Quote\Item\AbstractItem $quoteItem): ?int
     {
         $ruleId = (int)$this->getOptionValue($quoteItem, self::OPTION_RULE_ID);
