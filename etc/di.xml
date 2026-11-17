@@ -32,7 +32,7 @@
     </type>
 
     <type name="Magento\Checkout\Model\Cart">
-        <plugin name="disallow_changing_qty_of_free_gift" type="MageSuite\FreeGift\Plugin\DisallowChangingQtyOfFreeGift" />
+        <plugin name="disallow_changing_qty_of_free_gift" type="MageSuite\FreeGift\Plugin\Magento\Checkout\Model\Cart\DisallowChangingQtyOfFreeGift" sortOrder="1" />
     </type>
 
     <type name="Magento\SalesRule\Model\RulesApplier">
