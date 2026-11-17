@@ -10,6 +10,7 @@
 
     <event name="sales_quote_collect_totals_before">
         <observer name="reset_gift_items" instance="MageSuite\FreeGift\Observer\ResetGiftItems" />
+        <observer name="limit_gift_item_quantities" instance="MageSuite\FreeGift\Observer\LimitGiftItemQuantities" />
     </event>
 
     <event name="sales_quote_collect_totals_after">
