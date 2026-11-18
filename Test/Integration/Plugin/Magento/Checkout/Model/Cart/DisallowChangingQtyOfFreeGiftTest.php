@@ -14,6 +14,7 @@ class DisallowChangingQtyOfFreeGiftTest extends \Magento\TestFramework\TestCase\
     protected ?\Magento\Framework\App\ObjectManager $objectManager;
     protected ?\Magento\Checkout\Model\Cart $cart;
     protected ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository;
+    protected ?\Magento\Quote\Api\CartRepositoryInterface $cartRepository;
 
     protected function setUp(): void
     {
@@ -22,6 +23,7 @@ class DisallowChangingQtyOfFreeGiftTest extends \Magento\TestFramework\TestCase\
         $this->objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $this->cart = $this->objectManager->get(\Magento\Checkout\Model\Cart::class);
         $this->productRepository = $this->objectManager->get(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+        $this->cartRepository = $this->objectManager->get(\Magento\Quote\Api\CartRepositoryInterface::class);
     }
 
     #[\Magento\TestFramework\Fixture\DataFixture('MageSuite_FreeGift::Test/Integration/_files/product.php')]
@@ -100,6 +102,7 @@ class DisallowChangingQtyOfFreeGiftTest extends \Magento\TestFramework\TestCase\
 
     protected function updateGiftQty(int $giftItemId, int $qty): void
     {
+        $this->cart->setQuote($this->cartRepository->getActive((int)$this->cart->getQuote()->getId()));
         $this->cart->updateItems([$giftItemId => ['qty' => $qty]]);
         $this->cart->save();
     }
